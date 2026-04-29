@@ -11,7 +11,6 @@ namespace PPBM.ViewModels;
 
 public class MainViewModel : INotifyPropertyChanged
 {
-    private readonly Lazy<CpuTemperatureService> _cpuService = new(() => new(), isThreadSafe: false);
     private readonly System.Timers.Timer _pollTimer;
 
     private static readonly SolidColorBrush TempCold = new(WColor.FromRgb(0x4C, 0xAF, 0x50));
@@ -230,12 +229,39 @@ public class MainViewModel : INotifyPropertyChanged
 
     private void UpdateTemps()
     {
-        var cpu = _cpuService.Value;
-        var (package, maxCore, name) = cpu.GetCpuTemperatures();
-        CpuName = name;
-        PackageTemp = package;
-        MaxCoreTemp = maxCore;
-        CpuLoad = cpu.GetCpuLoad();
+        try
+        {
+            using var searcher = new System.Management.ManagementObjectSearcher(
+                @"root\WMI", "SELECT * FROM MSAcpi_ThermalZoneTemperature");
+            float? maxTemp = null;
+            foreach (System.Management.ManagementObject obj in searcher.Get())
+            {
+                var val = Convert.ToDouble(obj["CurrentTemperature"]);
+                var celsius = (float)((val / 10.0) - 273.15);
+                if (maxTemp is null || celsius > maxTemp)
+                    maxTemp = celsius;
+                CpuName = "CPU (WMI)";
+            }
+
+            if (maxTemp is not null)
+            {
+                PackageTemp = maxTemp;
+                MaxCoreTemp = maxTemp;
+            }
+
+            using var loadSearcher = new System.Management.ManagementObjectSearcher(
+                "SELECT * FROM Win32_PerfFormattedData_Counters_ProcessorInformation WHERE Name='_Total'");
+            foreach (System.Management.ManagementObject obj in loadSearcher.Get())
+            {
+                CpuLoad = Convert.ToSingle(obj["PercentProcessorPerformance"]);
+            }
+        }
+        catch
+        {
+            CpuName = "N/A";
+            PackageTemp = null;
+            MaxCoreTemp = null;
+        }
     }
 
     private void UpdateTempDisplay()
