@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Text.RegularExpressions;
 using PPBM.Models;
 
 namespace PPBM.Services;
@@ -15,12 +14,41 @@ public class PowerConfigService
         var output = await RunPowerCfgAsync("/query", "SCHEME_CURRENT", "SUB_PROCESSOR", BoostGuid);
         if (output is null) return BoostMode.Aggressive;
 
-        var match = Regex.Match(output, @"Current AC Power Setting Index:\s*(0x[0-9A-Fa-f]+)");
-        if (!match.Success)
-            match = Regex.Match(output, @"Current DC Power Setting Index:\s*(0x[0-9A-Fa-f]+)");
-
-        return ParseHexValue(match.Success ? match.Groups[1].Value : null);
+        var value = ParseLastHexValue(output);
+        return value switch
+        {
+            0 => BoostMode.Disabled,
+            1 => BoostMode.Enabled,
+            2 => BoostMode.Aggressive,
+            3 => BoostMode.EfficientEnabled,
+            4 => BoostMode.EfficientAggressive,
+            _ => BoostMode.Aggressive
+        };
     }
+
+    private static int ParseLastHexValue(string text)
+    {
+        // powercfg /query outputs:
+        //   Possible Setting Index: 0x00000000   ← these come first
+        //   Possible Setting Index: 0x00000001
+        //   Current AC Power Setting Index: 0x02 ← this is last
+        // We pick the LAST hex value — language-independent
+        var last = 2;
+        var idx = 0;
+        while ((idx = text.IndexOf("0x", idx, StringComparison.OrdinalIgnoreCase)) >= 0)
+        {
+            var end = idx + 2;
+            while (end < text.Length && IsHexChar(text[end])) end++;
+            var hex = text.AsSpan(idx + 2, end - idx - 2);
+            if (int.TryParse(hex, System.Globalization.NumberStyles.HexNumber, null, out var v))
+                last = v;
+            idx = end;
+        }
+        return last;
+    }
+
+    private static bool IsHexChar(char c) =>
+        (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
 
     public static async Task<bool> SetBoostModeAsync(BoostMode mode)
     {
@@ -45,21 +73,6 @@ public class PowerConfigService
         return await RunPowerCfgAsync("-attributes", "SUB_PROCESSOR", BoostGuid, "-ATTRIB_HIDE") is not null;
     }
 
-    private static BoostMode ParseHexValue(string? hex)
-    {
-        if (hex is null) return BoostMode.Aggressive;
-        var clean = hex.Replace("0x", "").Replace("0X", "").Trim();
-        return int.TryParse(clean, System.Globalization.NumberStyles.HexNumber, null, out var v) ? v switch
-        {
-            0 => BoostMode.Disabled,
-            1 => BoostMode.Enabled,
-            2 => BoostMode.Aggressive,
-            3 => BoostMode.EfficientEnabled,
-            4 => BoostMode.EfficientAggressive,
-            _ => BoostMode.Aggressive
-        } : BoostMode.Aggressive;
-    }
-
     private static async Task<string?> RunPowerCfgAsync(params string[] args)
     {
         return await Task.Run(() =>
@@ -81,7 +94,6 @@ public class PowerConfigService
                 using var process = new Process { StartInfo = psi };
                 process.Start();
 
-                // Read BEFORE WaitForExit to prevent deadlock on full buffer
                 var output = process.StandardOutput.ReadToEnd();
                 var error = process.StandardError.ReadToEnd();
                 process.WaitForExit(10000);
