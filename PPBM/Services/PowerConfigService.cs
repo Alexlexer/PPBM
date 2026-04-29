@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using System.Diagnostics;
 using PPBM.Models;
 
@@ -15,23 +14,12 @@ public class PowerConfigService
         {
             try
             {
-                using var process = new Process
-                {
-                    StartInfo = new ProcessStartInfo("powercfg", $"/query SCHEME_CURRENT SUB_PROCESSOR {BoostModeGuid}")
-                    {
-                        RedirectStandardOutput = true,
-                        UseShellExecute = false,
-                        CreateNoWindow = true,
-                        StandardOutputEncoding = System.Text.Encoding.UTF8
-                    }
-                };
-                process.Start();
-                var output = process.StandardOutput.ReadToEnd();
-                process.WaitForExit(5000);
+                var hex = RunPowerCfgAndGetOutput(
+                    "/getacvalueindex", "SCHEME_CURRENT", "SUB_PROCESSOR", BoostModeGuid);
 
-                var match = Regex.Match(output, @"0x([0-9A-Fa-f]{8})", RegexOptions.Multiline);
-                return match.Success
-                    ? ParseBoostMode(match.Value)
+                hex = hex?.Trim();
+                return !string.IsNullOrEmpty(hex)
+                    ? ParseBoostMode(hex)
                     : BoostMode.Aggressive;
             }
             catch
@@ -41,15 +29,40 @@ public class PowerConfigService
         });
     }
 
+    private static string? RunPowerCfgAndGetOutput(params string[] args)
+    {
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo("powercfg")
+            {
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                StandardOutputEncoding = System.Text.Encoding.UTF8
+            }
+        };
+        foreach (var arg in args)
+            process.StartInfo.ArgumentList.Add(arg);
+        process.Start();
+        process.WaitForExit(10000);
+        return process.ExitCode == 0
+            ? process.StandardOutput.ReadToEnd().Trim()
+            : null;
+    }
+
     private static BoostMode ParseBoostMode(string hex)
     {
-        return hex switch
+        // Handle both 0x2 and 0x00000002 formats
+        var clean = hex.Replace("0x", "").Replace("0X", "").Trim();
+        var value = int.TryParse(clean, System.Globalization.NumberStyles.HexNumber, null, out var v) ? v : 2;
+        return value switch
         {
-            "0x00000000" => BoostMode.Disabled,
-            "0x00000001" => BoostMode.Enabled,
-            "0x00000002" => BoostMode.Aggressive,
-            "0x00000003" => BoostMode.EfficientEnabled,
-            "0x00000004" => BoostMode.EfficientAggressive,
+            0 => BoostMode.Disabled,
+            1 => BoostMode.Enabled,
+            2 => BoostMode.Aggressive,
+            3 => BoostMode.EfficientEnabled,
+            4 => BoostMode.EfficientAggressive,
             _ => BoostMode.Aggressive
         };
     }
