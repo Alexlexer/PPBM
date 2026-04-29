@@ -1,7 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Windows;
 using System.Windows.Input;
 using PPBM.Models;
 using PPBM.Services;
@@ -43,7 +42,7 @@ public class MainViewModel : INotifyPropertyChanged
         SelectProfileCommand = new RelayCommand(obj => Task.Run(() => { if (obj is PowerProfile p) SelectedProfile = p; }));
 
         _pollTimer = new System.Timers.Timer(2000);
-        _pollTimer.Elapsed += (_, _) => Application.Current.Dispatcher.Invoke(() => UpdateTemps());
+        _pollTimer.Elapsed += (_, _) => System.Windows.Application.Current.Dispatcher.Invoke(() => UpdateTemps());
         _pollTimer.AutoReset = true;
         _pollTimer.Start();
 

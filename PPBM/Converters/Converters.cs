@@ -3,6 +3,8 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
 using PPBM.Models;
+using WinColor = System.Windows.Media.Color;
+using WinBinding = System.Windows.Data.Binding;
 
 namespace PPBM.Converters;
 
@@ -39,8 +41,8 @@ public class IsRecommendedConverter : IValueConverter
 
 public class RecommendBgConverter : IValueConverter
 {
-    private static readonly SolidColorBrush RecommendedBg = new(Color.FromRgb(0x31, 0x3F, 0x3F));
-    private static readonly SolidColorBrush NormalBg = new(Color.FromRgb(0x45, 0x47, 0x5A));
+    private static readonly SolidColorBrush RecommendedBg = new(WinColor.FromRgb(0x31, 0x3F, 0x3F));
+    private static readonly SolidColorBrush NormalBg = new(WinColor.FromRgb(0x45, 0x47, 0x5A));
 
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
@@ -65,14 +67,14 @@ public class ProfileEqualityConverter : IValueConverter
     {
         if (value is true && parameter is PowerProfile profile)
             return profile;
-        return Binding.DoNothing;
+        return WinBinding.DoNothing;
     }
 }
 
 public class WarnColorConverter : IValueConverter
 {
-    private static readonly SolidColorBrush WarnColor = new(Color.FromRgb(0xF3, 0x8B, 0xA8));
-    private static readonly SolidColorBrush OkColor = new(Color.FromRgb(0xA6, 0xE3, 0xA1));
+    private static readonly SolidColorBrush WarnColor = new(WinColor.FromRgb(0xF3, 0x8B, 0xA8));
+    private static readonly SolidColorBrush OkColor = new(WinColor.FromRgb(0xA6, 0xE3, 0xA1));
 
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
@@ -86,14 +88,14 @@ public class WarnColorConverter : IValueConverter
 
 public class BoostModeColorConverter : IValueConverter
 {
-    private static readonly SolidColorBrush BadColor = new(Color.FromRgb(0xF3, 0x8B, 0xA8));
-    private static readonly SolidColorBrush OkColor = new(Color.FromRgb(0xA6, 0xE3, 0xA1));
+    private static readonly SolidColorBrush BadBoost = new(WinColor.FromRgb(0xF3, 0x8B, 0xA8));
+    private static readonly SolidColorBrush OkBoost = new(WinColor.FromRgb(0xA6, 0xE3, 0xA1));
 
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
         if (value is BoostMode mode && mode == BoostMode.Aggressive)
-            return BadColor;
-        return OkColor;
+            return BadBoost;
+        return OkBoost;
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
