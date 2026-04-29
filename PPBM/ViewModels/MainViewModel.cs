@@ -40,6 +40,7 @@ public class MainViewModel : INotifyPropertyChanged
         AutoFixCommand = new RelayCommand(async _ => await AutoFixAsync());
         UnhideCommand = new RelayCommand(async _ => await UnhideAsync());
         ToggleSurviveUpdatesCommand = new RelayCommand(async _ => await ToggleSurviveUpdatesAsync());
+        SelectProfileCommand = new RelayCommand(obj => Task.Run(() => { if (obj is PowerProfile p) SelectedProfile = p; }));
 
         _pollTimer = new System.Timers.Timer(2000);
         _pollTimer.Elapsed += (_, _) => Application.Current.Dispatcher.Invoke(() => UpdateTemps());
@@ -78,7 +79,7 @@ public class MainViewModel : INotifyPropertyChanged
     public BoostMode CurrentBoostMode
     {
         get => _currentBoostMode;
-        set { _currentBoostMode = value; OnPropertyChanged(); OnPropertyChanged(nameof(BoostModeName)); OnPropertyChanged(nameof(IsBoostModeBad)); }
+        set { _currentBoostMode = value; OnPropertyChanged(); OnPropertyChanged(nameof(BoostModeName)); OnPropertyChanged(nameof(IsBoostModeBad)); OnPropertyChanged(nameof(BoostModeColor)); }
     }
 
     public string BoostModeName => CurrentBoostMode switch
@@ -108,13 +109,13 @@ public class MainViewModel : INotifyPropertyChanged
     public float? PackageTemp
     {
         get => _packageTemp;
-        set { _packageTemp = value; OnPropertyChanged(); UpdateTempDisplay(); }
+        set { _packageTemp = value; OnPropertyChanged(); OnPropertyChanged(nameof(CoreTempDisplay)); UpdateTempDisplay(); }
     }
 
     public float? MaxCoreTemp
     {
         get => _maxCoreTemp;
-        set { _maxCoreTemp = value; OnPropertyChanged(); UpdateTempDisplay(); }
+        set { _maxCoreTemp = value; OnPropertyChanged(); OnPropertyChanged(nameof(CoreTempDisplay)); UpdateTempDisplay(); }
     }
 
     public float? CpuLoad
@@ -174,6 +175,27 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand AutoFixCommand { get; }
     public ICommand UnhideCommand { get; }
     public ICommand ToggleSurviveUpdatesCommand { get; }
+    public ICommand SelectProfileCommand { get; }
+
+    public string CoreTempDisplay
+    {
+        get
+        {
+            var t = PackageTemp ?? MaxCoreTemp;
+            if (t is null) return "--°";
+            return $"{t.Value:F0}°";
+        }
+    }
+
+    public string BoostModeColor
+    {
+        get
+        {
+            if (CurrentBoostMode == BoostMode.Aggressive) return "#F38BA8";
+            if (CurrentBoostMode == BoostMode.Disabled) return "#A6E3A1";
+            return "#FAB387";
+        }
+    }
 
     private async Task RefreshAsync()
     {
