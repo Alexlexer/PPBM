@@ -5,8 +5,8 @@ namespace PPBM.Services;
 public class CpuTemperatureService : IDisposable
 {
     private readonly Computer _computer;
-    private readonly TimeSpan _updateInterval = TimeSpan.FromSeconds(2);
     private DateTime _lastUpdate = DateTime.MinValue;
+    private bool _initialized;
 
     public CpuTemperatureService()
     {
@@ -23,6 +23,18 @@ public class CpuTemperatureService : IDisposable
             IsBatteryEnabled = false
         };
         _computer.Open();
+        WarmUp();
+    }
+
+    private void WarmUp()
+    {
+        try
+        {
+            foreach (var hardware in _computer.Hardware)
+                hardware.Update();
+            _initialized = true;
+        }
+        catch { }
     }
 
     public (float? PackageTemp, float? MaxCoreTemp, string CpuName) GetCpuTemperatures()
@@ -30,11 +42,13 @@ public class CpuTemperatureService : IDisposable
         try
         {
             var now = DateTime.UtcNow;
-            if (now - _lastUpdate > _updateInterval)
+            if (now - _lastUpdate > TimeSpan.FromSeconds(2))
             {
                 foreach (var hardware in _computer.Hardware)
                     hardware.Update();
                 _lastUpdate = now;
+                if (!_initialized && _computer.Hardware.Count > 0)
+                    _initialized = true;
             }
 
             foreach (var hardware in _computer.Hardware)
@@ -42,21 +56,39 @@ public class CpuTemperatureService : IDisposable
                 if (hardware.HardwareType != HardwareType.Cpu)
                     continue;
 
-                var cpuName = hardware.Name;
+                var cpuName = string.IsNullOrEmpty(hardware.Name) ? "Unknown CPU" : hardware.Name;
                 float? packageTemp = null;
                 float? maxCoreTemp = null;
 
                 foreach (var sensor in hardware.Sensors)
                 {
-                    if (sensor.SensorType == SensorType.Temperature)
+                    if (sensor.SensorType != SensorType.Temperature)
+                        continue;
+
+                    if (sensor.Name.Contains("Package", StringComparison.OrdinalIgnoreCase) ||
+                        sensor.Name.Contains("CPU", StringComparison.OrdinalIgnoreCase) ||
+                        sensor.Name.Contains("Tctl", StringComparison.OrdinalIgnoreCase) ||
+                        sensor.Name.Contains("Tdie", StringComparison.OrdinalIgnoreCase))
                     {
-                        if (sensor.Name.Contains("Package", StringComparison.OrdinalIgnoreCase))
-                            packageTemp = sensor.Value;
-                        else if (sensor.Name.Contains("Core", StringComparison.OrdinalIgnoreCase) &&
-                                 !sensor.Name.Contains("Distance", StringComparison.OrdinalIgnoreCase))
+                        packageTemp ??= sensor.Value;
+                    }
+
+                    if (sensor.Name.Contains("Core", StringComparison.OrdinalIgnoreCase) &&
+                        !sensor.Name.Contains("Distance", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (maxCoreTemp is null || sensor.Value > maxCoreTemp)
+                            maxCoreTemp = sensor.Value;
+                    }
+                }
+
+                if (packageTemp is null && maxCoreTemp is null)
+                {
+                    foreach (var sensor in hardware.Sensors)
+                    {
+                        if (sensor.SensorType == SensorType.Temperature && sensor.Value.HasValue)
                         {
-                            if (maxCoreTemp is null || sensor.Value > maxCoreTemp)
-                                maxCoreTemp = sensor.Value;
+                            packageTemp = sensor.Value;
+                            break;
                         }
                     }
                 }
@@ -66,7 +98,7 @@ public class CpuTemperatureService : IDisposable
         }
         catch { }
 
-        return (null, null, "Unknown");
+        return (null, null, "Initializing sensors...");
     }
 
     public float? GetCpuLoad()

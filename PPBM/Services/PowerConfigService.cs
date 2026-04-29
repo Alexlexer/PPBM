@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using System.Diagnostics;
 using PPBM.Models;
 
@@ -14,31 +15,62 @@ public class PowerConfigService
         {
             try
             {
-                var psi = new ProcessStartInfo("powercfg", $"/query SCHEME_CURRENT SUB_PROCESSOR {BoostModeGuid}")
+                using var process = new Process
                 {
-                    RedirectStandardOutput = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
+                    StartInfo = new ProcessStartInfo("powercfg", $"/query SCHEME_CURRENT SUB_PROCESSOR {BoostModeGuid}")
+                    {
+                        RedirectStandardOutput = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        StandardOutputEncoding = System.Text.Encoding.UTF8
+                    }
                 };
-                using var process = Process.Start(psi)!;
+                process.Start();
                 var output = process.StandardOutput.ReadToEnd();
-                process.WaitForExit();
+                process.WaitForExit(5000);
 
-                if (output.Contains("0x00000004"))
-                    return BoostMode.EfficientAggressive;
-                if (output.Contains("0x00000003"))
-                    return BoostMode.EfficientEnabled;
-                if (output.Contains("0x00000002"))
-                    return BoostMode.Aggressive;
-                if (output.Contains("0x00000001"))
-                    return BoostMode.Enabled;
-                return BoostMode.Disabled;
+                var match = Regex.Match(output, @"0x([0-9A-Fa-f]{8})", RegexOptions.Multiline);
+                return match.Success
+                    ? ParseBoostMode(match.Value)
+                    : BoostMode.Aggressive;
             }
             catch
             {
                 return BoostMode.Aggressive;
             }
         });
+    }
+
+    private static BoostMode ParseBoostMode(string hex)
+    {
+        return hex switch
+        {
+            "0x00000000" => BoostMode.Disabled,
+            "0x00000001" => BoostMode.Enabled,
+            "0x00000002" => BoostMode.Aggressive,
+            "0x00000003" => BoostMode.EfficientEnabled,
+            "0x00000004" => BoostMode.EfficientAggressive,
+            _ => BoostMode.Aggressive
+        };
+    }
+
+    private static int RunPowerCfg(params string[] args)
+    {
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo("powercfg")
+            {
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            }
+        };
+        foreach (var arg in args)
+            process.StartInfo.ArgumentList.Add(arg);
+        process.Start();
+        process.WaitForExit(10000);
+        return process.ExitCode;
     }
 
     public static async Task<bool> SetBoostModeAsync(BoostMode mode)
@@ -48,42 +80,10 @@ public class PowerConfigService
             try
             {
                 var value = ((int)mode).ToString("X");
-                var psi = new ProcessStartInfo("powercfg")
-                {
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-
-                psi.ArgumentList.Add("/setacvalueindex");
-                psi.ArgumentList.Add("SCHEME_CURRENT");
-                psi.ArgumentList.Add("SUB_PROCESSOR");
-                psi.ArgumentList.Add(BoostModeGuid);
-                psi.ArgumentList.Add(value);
-
-                using var proc1 = Process.Start(psi)!;
-                proc1.WaitForExit();
-                if (proc1.ExitCode != 0) return false;
-
-                psi.ArgumentList.Clear();
-                psi.ArgumentList.Add("/setdcvalueindex");
-                psi.ArgumentList.Add("SCHEME_CURRENT");
-                psi.ArgumentList.Add("SUB_PROCESSOR");
-                psi.ArgumentList.Add(BoostModeGuid);
-                psi.ArgumentList.Add(value);
-
-                using var proc2 = Process.Start(psi)!;
-                proc2.WaitForExit();
-                if (proc2.ExitCode != 0) return false;
-
-                psi.ArgumentList.Clear();
-                psi.ArgumentList.Add("/setactive");
-                psi.ArgumentList.Add("SCHEME_CURRENT");
-
-                using var proc3 = Process.Start(psi)!;
-                proc3.WaitForExit();
-                return proc3.ExitCode == 0;
+                var ok1 = RunPowerCfg("/setacvalueindex", "SCHEME_CURRENT", "SUB_PROCESSOR", BoostModeGuid, value) == 0;
+                var ok2 = RunPowerCfg("/setdcvalueindex", "SCHEME_CURRENT", "SUB_PROCESSOR", BoostModeGuid, value) == 0;
+                var ok3 = RunPowerCfg("/setactive", "SCHEME_CURRENT") == 0;
+                return ok1 && ok2 && ok3;
             }
             catch
             {
@@ -98,40 +98,11 @@ public class PowerConfigService
         {
             try
             {
-                var psi = new ProcessStartInfo("powercfg")
-                {
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-
-                psi.ArgumentList.Add("/setacvalueindex");
-                psi.ArgumentList.Add("SCHEME_CURRENT");
-                psi.ArgumentList.Add("SUB_PROCESSOR");
-                psi.ArgumentList.Add(MaxFreqGuid);
-                psi.ArgumentList.Add(percent.ToString());
-
-                using var proc1 = Process.Start(psi)!;
-                proc1.WaitForExit();
-
-                psi.ArgumentList.Clear();
-                psi.ArgumentList.Add("/setdcvalueindex");
-                psi.ArgumentList.Add("SCHEME_CURRENT");
-                psi.ArgumentList.Add("SUB_PROCESSOR");
-                psi.ArgumentList.Add(MaxFreqGuid);
-                psi.ArgumentList.Add(percent.ToString());
-
-                using var proc2 = Process.Start(psi)!;
-                proc2.WaitForExit();
-
-                psi.ArgumentList.Clear();
-                psi.ArgumentList.Add("/setactive");
-                psi.ArgumentList.Add("SCHEME_CURRENT");
-
-                using var proc3 = Process.Start(psi)!;
-                proc3.WaitForExit();
-                return proc3.ExitCode == 0;
+                var p = percent.ToString();
+                var ok1 = RunPowerCfg("/setacvalueindex", "SCHEME_CURRENT", "SUB_PROCESSOR", MaxFreqGuid, p) == 0;
+                var ok2 = RunPowerCfg("/setdcvalueindex", "SCHEME_CURRENT", "SUB_PROCESSOR", MaxFreqGuid, p) == 0;
+                var ok3 = RunPowerCfg("/setactive", "SCHEME_CURRENT") == 0;
+                return ok1 && ok2 && ok3;
             }
             catch
             {
@@ -146,17 +117,7 @@ public class PowerConfigService
         {
             try
             {
-                var psi = new ProcessStartInfo("powercfg",
-                    $"-attributes SUB_PROCESSOR {BoostModeGuid} -ATTRIB_HIDE")
-                {
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-                using var process = Process.Start(psi)!;
-                process.WaitForExit();
-                return process.ExitCode == 0;
+                return RunPowerCfg("-attributes", "SUB_PROCESSOR", BoostModeGuid, "-ATTRIB_HIDE") == 0;
             }
             catch
             {

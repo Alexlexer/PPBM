@@ -11,25 +11,8 @@ namespace PPBM.ViewModels;
 
 public class MainViewModel : INotifyPropertyChanged
 {
-    private readonly CpuTemperatureService _cpuService;
+    private readonly CpuTemperatureService _cpuService = new();
     private readonly System.Timers.Timer _pollTimer;
-    private bool _isBusy;
-    private string _statusMessage = "Ready";
-    private BoostMode _currentBoostMode = BoostMode.Aggressive;
-    private PowerProfile _selectedProfile = PowerProfile.Disabled;
-    private bool _isAggressiveDetected;
-    private string _cpuName = "Detecting...";
-    private float? _packageTemp;
-    private float? _maxCoreTemp;
-    private float? _cpuLoad;
-    private string _tempDescription = "--";
-    private bool _surviveUpdatesEnabled;
-    private string _boostHexValue = "0x00000002";
-    private int _maxCpuPercent = 100;
-    private bool _maxCpuEnabled;
-    private ObservableCollection<MonitorInfo> _monitors = [];
-    private ObservableCollection<PowerProfile> _profiles;
-    private SolidColorBrush _tempColorBrush = new(WColor.FromRgb(0x88, 0x88, 0x88));
 
     private static readonly SolidColorBrush TempCold = new(WColor.FromRgb(0x4C, 0xAF, 0x50));
     private static readonly SolidColorBrush TempWarm = new(WColor.FromRgb(0xFF, 0xC1, 0x07));
@@ -41,8 +24,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     public MainViewModel()
     {
-        _cpuService = new CpuTemperatureService();
-        _profiles = new ObservableCollection<PowerProfile>(PowerProfile.All);
+        Profiles = [.. PowerProfile.All];
         SelectedProfile = PowerProfile.Disabled;
 
         RefreshBoostModeCommand = new RelayCommand(async _ => await RefreshAsync());
@@ -53,7 +35,7 @@ public class MainViewModel : INotifyPropertyChanged
         SelectProfileCommand = new RelayCommand(obj => { if (obj is PowerProfile p) SelectedProfile = p; return Task.CompletedTask; });
 
         _pollTimer = new System.Timers.Timer(2000);
-        _pollTimer.Elapsed += (_, _) => System.Windows.Application.Current.Dispatcher.Invoke(() => UpdateTemps());
+        _pollTimer.Elapsed += (_, _) => System.Windows.Application.Current.Dispatcher.Invoke(UpdateTemps);
         _pollTimer.AutoReset = true;
         _pollTimer.Start();
 
@@ -64,39 +46,46 @@ public class MainViewModel : INotifyPropertyChanged
 
     public ObservableCollection<PowerProfile> Profiles
     {
-        get => _profiles;
-        set { _profiles = value; OnPropertyChanged(); }
+        get => field;
+        set { field = value; OnPropertyChanged(); }
     }
 
     public PowerProfile SelectedProfile
     {
-        get => _selectedProfile;
+        get => field;
         set
         {
-            if (_selectedProfile == value) return;
-            if (_selectedProfile != null) _selectedProfile.IsSelected = false;
-            _selectedProfile = value;
-            if (_selectedProfile != null) _selectedProfile.IsSelected = true;
+            if (field == value) return;
+            if (field is not null) field.IsSelected = false;
+            field = value;
+            if (value is not null) value.IsSelected = true;
             OnPropertyChanged();
         }
     }
 
     public bool IsBusy
     {
-        get => _isBusy;
-        set { _isBusy = value; OnPropertyChanged(); }
+        get => field;
+        set { field = value; OnPropertyChanged(); }
     }
 
     public string StatusMessage
     {
-        get => _statusMessage;
-        set { _statusMessage = value; OnPropertyChanged(); }
-    }
+        get => field;
+        set { field = value; OnPropertyChanged(); }
+    } = "Ready";
 
     public BoostMode CurrentBoostMode
     {
-        get => _currentBoostMode;
-        set { _currentBoostMode = value; OnPropertyChanged(); OnPropertyChanged(nameof(BoostModeName)); OnPropertyChanged(nameof(IsBoostModeBad)); OnPropertyChanged(nameof(BoostModeBrush)); }
+        get => field;
+        set
+        {
+            field = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(BoostModeName));
+            OnPropertyChanged(nameof(IsBoostModeBad));
+            OnPropertyChanged(nameof(BoostModeBrush));
+        }
     }
 
     public string BoostModeName => CurrentBoostMode switch
@@ -120,50 +109,50 @@ public class MainViewModel : INotifyPropertyChanged
 
     public bool IsAggressiveDetected
     {
-        get => _isAggressiveDetected;
-        set { _isAggressiveDetected = value; OnPropertyChanged(); }
+        get => field;
+        set { field = value; OnPropertyChanged(); }
     }
 
     public string CpuName
     {
-        get => _cpuName;
-        set { _cpuName = value; OnPropertyChanged(); }
-    }
+        get => field;
+        set { field = value; OnPropertyChanged(); }
+    } = "Detecting...";
 
     public float? PackageTemp
     {
-        get => _packageTemp;
-        set { _packageTemp = value; OnPropertyChanged(); OnPropertyChanged(nameof(CoreTempDisplay)); UpdateTempDisplay(); }
+        get => field;
+        set { field = value; OnPropertyChanged(); OnPropertyChanged(nameof(CoreTempDisplay)); UpdateTempDisplay(); }
     }
 
     public float? MaxCoreTemp
     {
-        get => _maxCoreTemp;
-        set { _maxCoreTemp = value; OnPropertyChanged(); OnPropertyChanged(nameof(CoreTempDisplay)); UpdateTempDisplay(); }
+        get => field;
+        set { field = value; OnPropertyChanged(); OnPropertyChanged(nameof(CoreTempDisplay)); UpdateTempDisplay(); }
     }
 
     public float? CpuLoad
     {
-        get => _cpuLoad;
-        set { _cpuLoad = value; OnPropertyChanged(); }
+        get => field;
+        set { field = value; OnPropertyChanged(); }
     }
 
     public SolidColorBrush TempColorBrush
     {
-        get => _tempColorBrush;
-        set { _tempColorBrush = value; OnPropertyChanged(); }
-    }
+        get => field;
+        set { field = value; OnPropertyChanged(); }
+    } = new(WColor.FromRgb(0x88, 0x88, 0x88));
 
     public string TempDescription
     {
-        get => _tempDescription;
-        set { _tempDescription = value; OnPropertyChanged(); }
-    }
+        get => field;
+        set { field = value; OnPropertyChanged(); }
+    } = "--";
 
     public bool SurviveUpdatesEnabled
     {
-        get => _surviveUpdatesEnabled;
-        set { _surviveUpdatesEnabled = value; OnPropertyChanged(); OnPropertyChanged(nameof(SurviveButtonText)); }
+        get => field;
+        set { field = value; OnPropertyChanged(); OnPropertyChanged(nameof(SurviveButtonText)); }
     }
 
     public string SurviveButtonText => SurviveUpdatesEnabled
@@ -172,21 +161,23 @@ public class MainViewModel : INotifyPropertyChanged
 
     public string BoostHexValue
     {
-        get => _boostHexValue;
-        set { _boostHexValue = value; OnPropertyChanged(); }
-    }
+        get => field;
+        set { field = value; OnPropertyChanged(); }
+    } = "0x00000002";
 
     public int MaxCpuPercent
     {
-        get => _maxCpuPercent;
-        set { _maxCpuPercent = Math.Clamp(value, 50, 100); OnPropertyChanged(); }
+        get => field;
+        set { field = Math.Clamp(value, 50, 100); OnPropertyChanged(); }
     }
 
     public bool MaxCpuEnabled
     {
-        get => _maxCpuEnabled;
-        set { _maxCpuEnabled = value; OnPropertyChanged(); }
+        get => field;
+        set { field = value; OnPropertyChanged(); }
     }
+
+    private ObservableCollection<MonitorInfo> _monitors = [];
 
     public ObservableCollection<MonitorInfo> Monitors
     {
@@ -206,8 +197,7 @@ public class MainViewModel : INotifyPropertyChanged
         get
         {
             var t = PackageTemp ?? MaxCoreTemp;
-            if (t is null) return "--°";
-            return $"{t.Value:F0}°";
+            return t is null ? "--°" : $"{t.Value:F0}°";
         }
     }
 
@@ -221,15 +211,12 @@ public class MainViewModel : INotifyPropertyChanged
         IsAggressiveDetected = mode == BoostMode.Aggressive;
         BoostHexValue = $"0x{((int)mode):X8}";
 
-        var monitors = MonitorService.GetMonitors();
-        Monitors = new ObservableCollection<MonitorInfo>(monitors);
-
+        Monitors = [.. MonitorService.GetMonitors()];
         SurviveUpdatesEnabled = ScheduledTaskService.IsTaskInstalled();
 
-        if (IsAggressiveDetected)
-            StatusMessage = "Aggressive boost mode detected -- causing high idle temps!";
-        else
-            StatusMessage = $"Current mode: {BoostModeName} -- all good!";
+        StatusMessage = IsAggressiveDetected
+            ? "Aggressive boost mode detected -- causing high idle temps!"
+            : $"Current mode: {BoostModeName} -- all good!";
 
         IsBusy = false;
     }
@@ -240,9 +227,7 @@ public class MainViewModel : INotifyPropertyChanged
         CpuName = name;
         PackageTemp = package;
         MaxCoreTemp = maxCore;
-
-        var load = _cpuService.GetCpuLoad();
-        CpuLoad = load;
+        CpuLoad = _cpuService.GetCpuLoad();
     }
 
     private void UpdateTempDisplay()
@@ -255,19 +240,14 @@ public class MainViewModel : INotifyPropertyChanged
             return;
         }
 
-        var t = temp.Value;
-        SolidColorBrush brush;
-        if (t < 50)
-            brush = TempCold;
-        else if (t < 70)
-            brush = TempWarm;
-        else if (t < 85)
-            brush = TempHot;
-        else
-            brush = TempCritical;
-
-        TempColorBrush = brush;
-        TempDescription = $"{t:F0}C";
+        TempColorBrush = temp.Value switch
+        {
+            < 50 => TempCold,
+            < 70 => TempWarm,
+            < 85 => TempHot,
+            _ => TempCritical
+        };
+        TempDescription = $"{temp.Value:F0}C";
     }
 
     private async Task ApplyProfileAsync()
@@ -275,11 +255,10 @@ public class MainViewModel : INotifyPropertyChanged
         IsBusy = true;
         StatusMessage = $"Applying {SelectedProfile.Name}...";
 
-        var success = await PowerConfigService.SetBoostModeAsync(SelectedProfile.BoostMode);
-        if (success && MaxCpuEnabled)
-            await PowerConfigService.SetMaxCpuFrequencyAsync(MaxCpuPercent);
+        var boostOk = await PowerConfigService.SetBoostModeAsync(SelectedProfile.BoostMode);
+        var freqOk = MaxCpuEnabled && await PowerConfigService.SetMaxCpuFrequencyAsync(MaxCpuPercent);
 
-        if (success)
+        if (boostOk)
         {
             StatusMessage = $"{SelectedProfile.Name} applied! Temps should drop.";
             await RefreshAsync();
