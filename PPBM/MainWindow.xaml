@@ -8,8 +8,8 @@
         MinWidth="780" MinHeight="600"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
-        AllowsTransparency="True"
-        Background="Transparent">
+        AllowsTransparency="False"
+        Background="#1E1E2E">
 
     <Window.DataContext>
         <vm:MainViewModel/>

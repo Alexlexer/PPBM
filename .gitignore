@@ -6,6 +6,7 @@ obj/
 *.cache
 *.vs/
 .vscode/
+publish/
 
 ## Windows
 Thumbs.db

@@ -11,7 +11,7 @@ namespace PPBM.ViewModels;
 
 public class MainViewModel : INotifyPropertyChanged
 {
-    private readonly CpuTemperatureService _cpuService = new();
+    private readonly Lazy<CpuTemperatureService> _cpuService = new(() => new(), isThreadSafe: false);
     private readonly System.Timers.Timer _pollTimer;
 
     private static readonly SolidColorBrush TempCold = new(WColor.FromRgb(0x4C, 0xAF, 0x50));
@@ -35,7 +35,14 @@ public class MainViewModel : INotifyPropertyChanged
         SelectProfileCommand = new RelayCommand(obj => { if (obj is PowerProfile p) SelectedProfile = p; return Task.CompletedTask; });
 
         _pollTimer = new System.Timers.Timer(2000);
-        _pollTimer.Elapsed += (_, _) => System.Windows.Application.Current.Dispatcher.Invoke(UpdateTemps);
+        _pollTimer.Elapsed += (_, _) =>
+        {
+            try
+            {
+                System.Windows.Application.Current?.Dispatcher?.Invoke(UpdateTemps);
+            }
+            catch { }
+        };
         _pollTimer.AutoReset = true;
         _pollTimer.Start();
 
@@ -223,11 +230,12 @@ public class MainViewModel : INotifyPropertyChanged
 
     private void UpdateTemps()
     {
-        var (package, maxCore, name) = _cpuService.GetCpuTemperatures();
+        var cpu = _cpuService.Value;
+        var (package, maxCore, name) = cpu.GetCpuTemperatures();
         CpuName = name;
         PackageTemp = package;
         MaxCoreTemp = maxCore;
-        CpuLoad = _cpuService.GetCpuLoad();
+        CpuLoad = cpu.GetCpuLoad();
     }
 
     private void UpdateTempDisplay()
