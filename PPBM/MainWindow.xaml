@@ -18,12 +18,9 @@
     <Window.Resources>
         <!-- Converters -->
         <conv:BoolToVisibilityConverter x:Key="BoolToVis"/>
-        <conv:InvertBoolConverter x:Key="InvertBool"/>
         <conv:IsRecommendedConverter x:Key="IsRecommended"/>
         <conv:RecommendBgConverter x:Key="RecommendBg"/>
-        <conv:ProfileEqualityConverter x:Key="ProfileEq"/>
-        <conv:WarnColorConverter x:Key="WarnColor"/>
-        <conv:BoostModeColorConverter x:Key="BoostModeColorConv"/>
+        <conv:WarnColorConverter x:Key="WarnColor"/>        
 
         <!-- Colors -->
         <SolidColorBrush x:Key="Bg" Color="#1E1E2E"/>
@@ -207,7 +204,7 @@
                                            Foreground="{StaticResource Subtext}" Margin="0,0,0,4"/>
                                 <TextBlock Text="{Binding CoreTempDisplay}"
                                            FontSize="64" FontWeight="Light"
-                                           Foreground="{Binding TempColor}"
+                                           Foreground="{Binding TempColorBrush}"
                                            FontFamily="Segoe UI Light"
                                            LineStackingStrategy="BlockLineHeight" LineHeight="64"/>
                                 <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
@@ -247,11 +244,8 @@
                                     <StackPanel>
                                         <StackPanel Orientation="Horizontal">
                                             <Ellipse Width="10" Height="10" Margin="0,0,8,0"
-                                                     VerticalAlignment="Center">
-                                                <Ellipse.Fill>
-                                                    <SolidColorBrush Color="{Binding BoostModeColor}"/>
-                                                </Ellipse.Fill>
-                                            </Ellipse>
+                                                     VerticalAlignment="Center"
+                                                     Fill="{Binding DataContext.BoostModeBrush, RelativeSource={RelativeSource AncestorType=Window}}"/>
                                             <TextBlock Text="Boost Mode" FontSize="12"
                                                        Foreground="{StaticResource Subtext}"/>
                                         </StackPanel>
@@ -313,10 +307,20 @@
 
                                         <StackPanel Grid.Column="0">
                                             <StackPanel Orientation="Horizontal">
-                                                <RadioButton
-                                                    IsChecked="{Binding DataContext.SelectedProfile, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource ProfileEq}, ConverterParameter={Binding}}"
-                                                    GroupName="Profiles"
-                                                    VerticalAlignment="Center"/>
+                                                <Ellipse Width="16" Height="16" Stroke="#585B70" StrokeThickness="2"
+                                                         VerticalAlignment="Center">
+                                                    <Ellipse.Style>
+                                                        <Style TargetType="Ellipse">
+                                                            <Setter Property="Fill" Value="Transparent"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                    <Setter Property="Fill" Value="{StaticResource Accent}"/>
+                                                                    <Setter Property="Stroke" Value="{StaticResource Accent}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Ellipse.Style>
+                                                </Ellipse>
                                                 <TextBlock Text="{Binding Name}" FontSize="15"
                                                            FontWeight="SemiBold" Foreground="{StaticResource Text}"
                                                            Margin="10,0,0,0"/>
@@ -344,8 +348,8 @@
 
                                         <Button Grid.Column="1" Content="Apply" Style="{StaticResource AccentBtn}"
                                                 VerticalAlignment="Center" Margin="12,0,0,0"
-                                                Command="{Binding DataContext.ApplyProfileCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                Tag="{Binding}"/>
+                                                Tag="{Binding}"
+                                                Click="ApplyButton_Click"/>
                                     </Grid>
                                 </Border>
 

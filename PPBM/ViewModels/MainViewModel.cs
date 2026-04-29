@@ -2,8 +2,10 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using System.Windows.Media;
 using PPBM.Models;
 using PPBM.Services;
+using WColor = System.Windows.Media.Color;
 
 namespace PPBM.ViewModels;
 
@@ -20,7 +22,6 @@ public class MainViewModel : INotifyPropertyChanged
     private float? _packageTemp;
     private float? _maxCoreTemp;
     private float? _cpuLoad;
-    private string _tempColor = "#888";
     private string _tempDescription = "--";
     private bool _surviveUpdatesEnabled;
     private string _boostHexValue = "0x00000002";
@@ -28,18 +29,28 @@ public class MainViewModel : INotifyPropertyChanged
     private bool _maxCpuEnabled;
     private ObservableCollection<MonitorInfo> _monitors = [];
     private ObservableCollection<PowerProfile> _profiles;
+    private SolidColorBrush _tempColorBrush = new(WColor.FromRgb(0x88, 0x88, 0x88));
+
+    private static readonly SolidColorBrush TempCold = new(WColor.FromRgb(0x4C, 0xAF, 0x50));
+    private static readonly SolidColorBrush TempWarm = new(WColor.FromRgb(0xFF, 0xC1, 0x07));
+    private static readonly SolidColorBrush TempHot = new(WColor.FromRgb(0xFF, 0x98, 0x00));
+    private static readonly SolidColorBrush TempCritical = new(WColor.FromRgb(0xF4, 0x43, 0x36));
+    private static readonly SolidColorBrush BoostNormal = new(WColor.FromRgb(0xFA, 0xB3, 0x87));
+    private static readonly SolidColorBrush BoostDisabled = new(WColor.FromRgb(0xA6, 0xE3, 0xA1));
+    private static readonly SolidColorBrush BoostAggressive = new(WColor.FromRgb(0xF3, 0x8B, 0xA8));
 
     public MainViewModel()
     {
         _cpuService = new CpuTemperatureService();
         _profiles = new ObservableCollection<PowerProfile>(PowerProfile.All);
+        SelectedProfile = PowerProfile.Disabled;
 
         RefreshBoostModeCommand = new RelayCommand(async _ => await RefreshAsync());
         ApplyProfileCommand = new RelayCommand(async _ => await ApplyProfileAsync());
         AutoFixCommand = new RelayCommand(async _ => await AutoFixAsync());
         UnhideCommand = new RelayCommand(async _ => await UnhideAsync());
         ToggleSurviveUpdatesCommand = new RelayCommand(async _ => await ToggleSurviveUpdatesAsync());
-        SelectProfileCommand = new RelayCommand(obj => Task.Run(() => { if (obj is PowerProfile p) SelectedProfile = p; }));
+        SelectProfileCommand = new RelayCommand(obj => { if (obj is PowerProfile p) SelectedProfile = p; return Task.CompletedTask; });
 
         _pollTimer = new System.Timers.Timer(2000);
         _pollTimer.Elapsed += (_, _) => System.Windows.Application.Current.Dispatcher.Invoke(() => UpdateTemps());
@@ -60,7 +71,14 @@ public class MainViewModel : INotifyPropertyChanged
     public PowerProfile SelectedProfile
     {
         get => _selectedProfile;
-        set { _selectedProfile = value; OnPropertyChanged(); }
+        set
+        {
+            if (_selectedProfile == value) return;
+            if (_selectedProfile != null) _selectedProfile.IsSelected = false;
+            _selectedProfile = value;
+            if (_selectedProfile != null) _selectedProfile.IsSelected = true;
+            OnPropertyChanged();
+        }
     }
 
     public bool IsBusy
@@ -78,17 +96,24 @@ public class MainViewModel : INotifyPropertyChanged
     public BoostMode CurrentBoostMode
     {
         get => _currentBoostMode;
-        set { _currentBoostMode = value; OnPropertyChanged(); OnPropertyChanged(nameof(BoostModeName)); OnPropertyChanged(nameof(IsBoostModeBad)); OnPropertyChanged(nameof(BoostModeColor)); }
+        set { _currentBoostMode = value; OnPropertyChanged(); OnPropertyChanged(nameof(BoostModeName)); OnPropertyChanged(nameof(IsBoostModeBad)); OnPropertyChanged(nameof(BoostModeBrush)); }
     }
 
     public string BoostModeName => CurrentBoostMode switch
     {
         BoostMode.Disabled => "Disabled (Cool & Quiet)",
         BoostMode.Enabled => "Enabled (Balanced)",
-        BoostMode.Aggressive => "⚠️ Aggressive (HOT)",
+        BoostMode.Aggressive => "Aggressive (HOT)",
         BoostMode.EfficientEnabled => "Efficient Enabled (Gaming)",
         BoostMode.EfficientAggressive => "Efficient Aggressive (Rendering)",
         _ => "Unknown"
+    };
+
+    public SolidColorBrush BoostModeBrush => CurrentBoostMode switch
+    {
+        BoostMode.Aggressive => BoostAggressive,
+        BoostMode.Disabled => BoostDisabled,
+        _ => BoostNormal
     };
 
     public bool IsBoostModeBad => CurrentBoostMode == BoostMode.Aggressive;
@@ -123,10 +148,10 @@ public class MainViewModel : INotifyPropertyChanged
         set { _cpuLoad = value; OnPropertyChanged(); }
     }
 
-    public string TempColor
+    public SolidColorBrush TempColorBrush
     {
-        get => _tempColor;
-        set { _tempColor = value; OnPropertyChanged(); }
+        get => _tempColorBrush;
+        set { _tempColorBrush = value; OnPropertyChanged(); }
     }
 
     public string TempDescription
@@ -142,8 +167,8 @@ public class MainViewModel : INotifyPropertyChanged
     }
 
     public string SurviveButtonText => SurviveUpdatesEnabled
-        ? "✅ Survive Updates: ON"
-        : "🛡️ Enable Survive Updates";
+        ? "Survive Updates: ON"
+        : "Enable Survive Updates";
 
     public string BoostHexValue
     {
@@ -186,16 +211,6 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
-    public string BoostModeColor
-    {
-        get
-        {
-            if (CurrentBoostMode == BoostMode.Aggressive) return "#F38BA8";
-            if (CurrentBoostMode == BoostMode.Disabled) return "#A6E3A1";
-            return "#FAB387";
-        }
-    }
-
     private async Task RefreshAsync()
     {
         IsBusy = true;
@@ -212,13 +227,9 @@ public class MainViewModel : INotifyPropertyChanged
         SurviveUpdatesEnabled = ScheduledTaskService.IsTaskInstalled();
 
         if (IsAggressiveDetected)
-        {
-            StatusMessage = "⚠️ Aggressive boost mode detected — causing high idle temps!";
-        }
+            StatusMessage = "Aggressive boost mode detected -- causing high idle temps!";
         else
-        {
-            StatusMessage = $"Current mode: {BoostModeName} — all good!";
-        }
+            StatusMessage = $"Current mode: {BoostModeName} -- all good!";
 
         IsBusy = false;
     }
@@ -240,21 +251,23 @@ public class MainViewModel : INotifyPropertyChanged
         if (temp is null)
         {
             TempDescription = "N/A";
-            TempColor = "#888";
+            TempColorBrush = new SolidColorBrush(WColor.FromRgb(0x88, 0x88, 0x88));
             return;
         }
 
         var t = temp.Value;
+        SolidColorBrush brush;
         if (t < 50)
-            TempColor = "#4CAF50";
+            brush = TempCold;
         else if (t < 70)
-            TempColor = "#FFC107";
+            brush = TempWarm;
         else if (t < 85)
-            TempColor = "#FF9800";
+            brush = TempHot;
         else
-            TempColor = "#F44336";
+            brush = TempCritical;
 
-        TempDescription = $"{t:F0}°C";
+        TempColorBrush = brush;
+        TempDescription = $"{t:F0}C";
     }
 
     private async Task ApplyProfileAsync()
@@ -268,13 +281,11 @@ public class MainViewModel : INotifyPropertyChanged
 
         if (success)
         {
-            StatusMessage = $"✅ {SelectedProfile.Name} applied! Temps should drop.";
+            StatusMessage = $"{SelectedProfile.Name} applied! Temps should drop.";
             await RefreshAsync();
         }
         else
-        {
-            StatusMessage = "❌ Failed to apply settings. Run as Administrator.";
-        }
+            StatusMessage = "Failed to apply settings. Run as Administrator.";
 
         IsBusy = false;
     }
@@ -287,7 +298,7 @@ public class MainViewModel : INotifyPropertyChanged
         var curMode = await PowerConfigService.GetCurrentBoostModeAsync();
         if (curMode != BoostMode.Aggressive)
         {
-            StatusMessage = "✅ Boost mode is already not Aggressive. No fix needed.";
+            StatusMessage = "Boost mode is already not Aggressive. No fix needed.";
             IsBusy = false;
             return;
         }
@@ -296,14 +307,9 @@ public class MainViewModel : INotifyPropertyChanged
         if (success && MaxCpuEnabled)
             await PowerConfigService.SetMaxCpuFrequencyAsync(MaxCpuPercent);
 
-        if (success)
-        {
-            StatusMessage = "✅ Auto-fixed! Set to Cool & Quiet. Temps should drop 20-40°C.";
-        }
-        else
-        {
-            StatusMessage = "❌ Auto-fix failed. Run as Administrator.";
-        }
+        StatusMessage = success
+            ? "Auto-fixed! Set to Cool & Quiet. Temps should drop 20-40C."
+            : "Auto-fix failed. Run as Administrator.";
 
         await RefreshAsync();
         IsBusy = false;
@@ -316,8 +322,8 @@ public class MainViewModel : INotifyPropertyChanged
 
         var success = await PowerConfigService.UnhideBoostSettingAsync();
         StatusMessage = success
-            ? "✅ Setting is now visible in Control Panel → Power Options → Advanced"
-            : "❌ Failed to unhide. Run as Administrator.";
+            ? "Setting is now visible in Control Panel > Power Options > Advanced"
+            : "Failed to unhide. Run as Administrator.";
 
         IsBusy = false;
     }
@@ -340,8 +346,8 @@ public class MainViewModel : INotifyPropertyChanged
 
             SurviveUpdatesEnabled = success;
             StatusMessage = success
-                ? "✅ Will auto-reapply after Windows updates & login."
-                : "❌ Failed to create task.";
+                ? "Will auto-reapply after Windows updates & login."
+                : "Failed to create task.";
         }
 
         IsBusy = false;

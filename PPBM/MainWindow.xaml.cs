@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
 using PPBM.Models;
 using PPBM.ViewModels;
 
@@ -12,24 +13,19 @@ public partial class MainWindow : Window
         InitializeComponent();
         StateChanged += (_, _) =>
         {
-            if (WindowState == WindowState.Maximized)
-            {
-                var border = (System.Windows.Controls.Border)Content;
-                border.CornerRadius = new CornerRadius(0);
-            }
+            var border = (System.Windows.Controls.Border)Content;
+            border.CornerRadius = WindowState == WindowState.Maximized
+                ? new CornerRadius(0)
+                : new CornerRadius(14);
         };
     }
 
     private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (e.ClickCount == 2)
-        {
             Maximize_Click(sender, e);
-        }
         else
-        {
             DragMove();
-        }
     }
 
     private void Minimize_Click(object sender, RoutedEventArgs e)
@@ -51,12 +47,25 @@ public partial class MainWindow : Window
 
     private void ProfileCard_Click(object sender, MouseButtonEventArgs e)
     {
-        if (sender is FrameworkElement element && element.Tag is PowerProfile profile)
+        var element = sender as DependencyObject;
+        while (element != null)
         {
-            if (DataContext is MainViewModel vm)
+            if (element is FrameworkElement fe && fe.Tag is PowerProfile profile)
             {
-                vm.SelectedProfile = profile;
+                if (DataContext is MainViewModel vm)
+                    vm.SelectedProfile = profile;
+                return;
             }
+            element = VisualTreeHelper.GetParent(element);
+        }
+    }
+
+    private void ApplyButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.Tag is PowerProfile profile && DataContext is MainViewModel vm)
+        {
+            vm.SelectedProfile = profile;
+            vm.ApplyProfileCommand.Execute(null);
         }
     }
 }
