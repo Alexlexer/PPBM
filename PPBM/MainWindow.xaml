@@ -18,9 +18,8 @@
     <Window.Resources>
         <!-- Converters -->
         <conv:BoolToVisibilityConverter x:Key="BoolToVis"/>
-        <conv:IsRecommendedConverter x:Key="IsRecommended"/>
         <conv:RecommendBgConverter x:Key="RecommendBg"/>
-        <conv:WarnColorConverter x:Key="WarnColor"/>        
+        <conv:WarnColorConverter x:Key="WarnColor"/>
 
         <!-- Colors -->
         <SolidColorBrush x:Key="Bg" Color="#1E1E2E"/>
