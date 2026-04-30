@@ -1,0 +1,41 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - '*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore PPBM/PPBM.csproj
+
+      - name: Build
+        run: dotnet build PPBM/PPBM.csproj -c Release --no-restore
+
+      - name: Publish
+        run: dotnet publish PPBM/PPBM.csproj -c Release -r win-x64 -o ./publish
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PPBM-win-x64
+          path: ./publish/PPBM.exe
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./publish/PPBM.exe
+          generate_release_notes: true

@@ -9,7 +9,7 @@
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         AllowsTransparency="False"
-        Background="#1E1E2E">
+        Background="#202020">
 
     <Window.DataContext>
         <vm:MainViewModel/>
@@ -21,44 +21,59 @@
         <conv:RecommendBgConverter x:Key="RecommendBg"/>
         <conv:WarnColorConverter x:Key="WarnColor"/>
 
-        <!-- Colors -->
-        <SolidColorBrush x:Key="Bg" Color="#1E1E2E"/>
-        <SolidColorBrush x:Key="CardBg" Color="#2A2A3C"/>
-        <SolidColorBrush x:Key="CardHover" Color="#333352"/>
-        <SolidColorBrush x:Key="Surface" Color="#313244"/>
-        <SolidColorBrush x:Key="Text" Color="#CDD6F4"/>
-        <SolidColorBrush x:Key="Subtext" Color="#9399B2"/>
-        <SolidColorBrush x:Key="Muted" Color="#585B70"/>
-        <SolidColorBrush x:Key="Accent" Color="#89B4FA"/>
-        <SolidColorBrush x:Key="Green" Color="#A6E3A1"/>
-        <SolidColorBrush x:Key="Red" Color="#F38BA8"/>
-        <SolidColorBrush x:Key="Yellow" Color="#F9E2AF"/>
-        <SolidColorBrush x:Key="Peach" Color="#FAB387"/>
-        <SolidColorBrush x:Key="Lavender" Color="#B4BEFE"/>
-        <SolidColorBrush x:Key="StatusBarBg" Color="#181825"/>
+        <!-- Windows 11 Dark Mode Color Palette -->
+        <SolidColorBrush x:Key="LayerFillDefault" Color="#2C2C2C"/>
+        <SolidColorBrush x:Key="LayerFillHover" Color="#333333"/>
+        <SolidColorBrush x:Key="CardStrokeDefault" Color="#3D3D3D"/>
+        <SolidColorBrush x:Key="TextPrimary" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="TextSecondary" Color="#CCCCCC"/>
+        <SolidColorBrush x:Key="TextTertiary" Color="#999999"/>
+        <SolidColorBrush x:Key="AccentDefault" Color="#60CDFF"/>
+        <SolidColorBrush x:Key="AccentHover" Color="#73D4FF"/>
+        <SolidColorBrush x:Key="AccentPressed" Color="#4DB8E6"/>
+        <SolidColorBrush x:Key="AccentText" Color="#003349"/>
+        <SolidColorBrush x:Key="ControlFillDefault" Color="#FFFFFF" Opacity="0.06"/>
+        <SolidColorBrush x:Key="ControlFillHover" Color="#FFFFFF" Opacity="0.08"/>
+        <SolidColorBrush x:Key="ControlFillPressed" Color="#FFFFFF" Opacity="0.04"/>
+        <SolidColorBrush x:Key="SurfaceStrokeDefault" Color="#404040"/>
+        <SolidColorBrush x:Key="StatusBarBg" Color="#181818"/>
+        <SolidColorBrush x:Key="DangerDefault" Color="#E04343"/>
+        <SolidColorBrush x:Key="DangerHover" Color="#E85C5C"/>
+        <SolidColorBrush x:Key="DangerPressed" Color="#C73A3A"/>
+        <SolidColorBrush x:Key="PositiveGreen" Color="#6BCB77"/>
+        <SolidColorBrush x:Key="WarningOrange" Color="#FF8C42"/>
 
-        <!-- Button Styles -->
+        <!-- Windows 11 Typography: Segoe UI Variable with Segoe UI fallback -->
+        <FontFamily x:Key="AppFont">Segoe UI Variable, Segoe UI, sans-serif</FontFamily>
+
+        <!-- Standard Button Style (Windows 11) -->
         <Style x:Key="AccentBtn" TargetType="Button">
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
+            <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{StaticResource AccentText}"/>
             <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="16,8"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="border" Background="{StaticResource Accent}"
-                                CornerRadius="10" Padding="16,10">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Border x:Name="border" Background="{StaticResource AccentDefault}"
+                                CornerRadius="4" Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              RecognizesAccessKey="True"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#74C7EC"/>
+                                <Setter TargetName="border" Property="Background" Value="{StaticResource AccentHover}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#89DCEB"/>
+                                <Setter TargetName="border" Property="Background" Value="{StaticResource AccentPressed}"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="border" Property="Background" Value="#585B70"/>
+                                <Setter Property="Foreground" Value="{StaticResource TextTertiary}"/>
+                                <Setter TargetName="border" Property="Background" Value="{StaticResource ControlFillDefault}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -66,20 +81,34 @@
             </Setter>
         </Style>
 
-        <Style x:Key="DangerBtn" TargetType="Button" BasedOn="{StaticResource AccentBtn}">
+        <!-- Danger Button Style -->
+        <Style x:Key="DangerBtn" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="16,8"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="border" Background="{StaticResource Red}"
-                                CornerRadius="10" Padding="16,10">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Border x:Name="border" Background="{StaticResource DangerDefault}"
+                                CornerRadius="4" Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              RecognizesAccessKey="True"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#E06C8A"/>
+                                <Setter TargetName="border" Property="Background" Value="{StaticResource DangerHover}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#D95B79"/>
+                                <Setter TargetName="border" Property="Background" Value="{StaticResource DangerPressed}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="{StaticResource TextTertiary}"/>
+                                <Setter TargetName="border" Property="Background" Value="{StaticResource ControlFillDefault}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -87,23 +116,27 @@
             </Setter>
         </Style>
 
+        <!-- Ghost Button (Title bar) -->
         <Style x:Key="GhostBtn" TargetType="Button">
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
             <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Regular"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Foreground" Value="{StaticResource Subtext}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Padding" Value="12,6"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="border" Background="Transparent"
-                                CornerRadius="8" Padding="{TemplateBinding Padding}">
+                                CornerRadius="4" Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="{StaticResource Surface}"/>
+                                <Setter TargetName="border" Property="Background" Value="{StaticResource LayerFillHover}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -111,22 +144,31 @@
             </Setter>
         </Style>
 
+        <!-- Small Utility Button -->
         <Style x:Key="SmallBtn" TargetType="Button">
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="Foreground" Value="{StaticResource Subtext}"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Background" Value="{StaticResource Surface}"/>
+            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Regular"/>
+            <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{StaticResource CardStrokeDefault}"/>
+            <Setter Property="Background" Value="{StaticResource LayerFillDefault}"/>
+            <Setter Property="Padding" Value="12,6"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="border" Background="{TemplateBinding Background}"
-                                CornerRadius="6" Padding="10,5">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="4" Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              RecognizesAccessKey="True"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="{StaticResource Muted}"/>
+                                <Setter TargetName="border" Property="Background" Value="{StaticResource LayerFillHover}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -136,17 +178,20 @@
 
         <!-- Checkbox Style -->
         <Style TargetType="CheckBox">
-            <Setter Property="Foreground" Value="{StaticResource Text}"/>
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+
+        <!-- Slider Style (Windows 11) -->
+        <Style TargetType="Slider">
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="IsSnapToTickEnabled" Value="True"/>
         </Style>
     </Window.Resources>
 
-    <!-- Root border with rounded corners and shadow -->
-    <Border Background="{StaticResource Bg}" CornerRadius="14">
-        <Border.Effect>
-            <DropShadowEffect BlurRadius="30" ShadowDepth="4" Opacity="0.4" Color="#000000"/>
-        </Border.Effect>
-
+    <!-- Root layout: base layer with rounded corners and subtle border -->
+    <Border Background="#202020" CornerRadius="8">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -154,8 +199,9 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- ===== TITLE BAR ===== -->
-            <Grid Grid.Row="0" Height="48" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+            <!-- ===== TITLE BAR (Windows 11 style) ===== -->
+            <Grid Grid.Row="0" Height="44" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown"
+                  Background="#202020">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
@@ -163,33 +209,45 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="16,0,0,0">
-                    <TextBlock Text="PPBM" FontSize="14" FontWeight="Bold"
-                               Foreground="{StaticResource Accent}" VerticalAlignment="Center"/>
-                    <TextBlock Text="·" FontSize="14" Foreground="{StaticResource Muted}"
-                               VerticalAlignment="Center" Margin="6,0"/>
-                    <TextBlock Text="Processor Boost Manager" FontSize="12"
-                               Foreground="{StaticResource Subtext}" VerticalAlignment="Center"/>
+                    <TextBlock Text="PPBM" FontFamily="{StaticResource AppFont}"
+                               FontSize="14" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center"/>
+                    <TextBlock Text="·" FontFamily="{StaticResource AppFont}"
+                               FontSize="14" Foreground="{StaticResource TextTertiary}"
+                               VerticalAlignment="Center" Margin="8,0"/>
+                    <TextBlock Text="Processor Boost Manager" FontFamily="{StaticResource AppFont}"
+                               FontSize="12" FontWeight="Regular"
+                               Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
                 </StackPanel>
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,4,0">
-                    <Button Content="─" Style="{StaticResource GhostBtn}"
+                    <Button Content="&#xE921;" Style="{StaticResource GhostBtn}"
                             Click="Minimize_Click" Width="40" Height="32"
-                            FontSize="16" ToolTip="Minimize"/>
-                    <Button Content="□" Style="{StaticResource GhostBtn}"
+                            FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                            FontSize="10" ToolTip="Minimize"/>
+                    <Button Content="&#xE922;" Style="{StaticResource GhostBtn}"
                             Click="Maximize_Click" Width="40" Height="32"
-                            FontSize="14" ToolTip="Maximize"/>
-                    <Button x:Name="CloseBtn" Content="✕" Style="{StaticResource GhostBtn}"
+                            FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                            FontSize="10" ToolTip="Maximize"/>
+                    <Button x:Name="CloseBtn" Content="&#xE8BB;" Style="{StaticResource GhostBtn}"
                             Click="Close_Click" Width="40" Height="32"
-                            FontSize="14" ToolTip="Close"/>
+                            FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                            FontSize="10" ToolTip="Close"/>
                 </StackPanel>
             </Grid>
 
-            <!-- ===== MAIN CONTENT ===== -->
+            <!-- ===== MAIN CONTENT (content layer) ===== -->
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                <StackPanel Margin="24,8,24,8">
+                <StackPanel Margin="24,12,24,8">
 
-                    <!-- CPU TEMP HERO -->
-                    <Border Background="{StaticResource CardBg}" CornerRadius="14" Padding="24,20">
+                    <!-- CPU TEMP HERO (Card: elevation 8) -->
+                    <Border Background="{StaticResource LayerFillDefault}"
+                            BorderBrush="{StaticResource CardStrokeDefault}"
+                            BorderThickness="1"
+                            CornerRadius="8" Padding="24,20">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.25" Color="#000000"/>
+                        </Border.Effect>
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
@@ -199,72 +257,83 @@
 
                             <!-- Big temp display -->
                             <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,24,0">
-                                <TextBlock Text="CPU" FontSize="13" FontWeight="SemiBold"
-                                           Foreground="{StaticResource Subtext}" Margin="0,0,0,4"/>
+                                <TextBlock Text="CPU" FontFamily="{StaticResource AppFont}"
+                                           FontSize="12" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextTertiary}" Margin="0,0,0,4"/>
                                 <TextBlock Text="{Binding CoreTempDisplay}"
-                                           FontSize="64" FontWeight="Light"
+                                           FontFamily="{StaticResource AppFont}"
+                                           FontSize="48" FontWeight="Light"
                                            Foreground="{Binding TempColorBrush}"
-                                           FontFamily="Segoe UI Light"
-                                           LineStackingStrategy="BlockLineHeight" LineHeight="64"/>
-                                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                    <TextBlock Text="Max core:" FontSize="12"
-                                               Foreground="{StaticResource Subtext}"/>
+                                           LineStackingStrategy="BlockLineHeight" LineHeight="52"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                    <TextBlock Text="Max core:" FontFamily="{StaticResource AppFont}"
+                                               FontSize="12" Foreground="{StaticResource TextTertiary}"/>
                                     <TextBlock Text="{Binding MaxCoreTemp, StringFormat={}{0:F0}°C}"
+                                               FontFamily="{StaticResource AppFont}"
                                                FontSize="12" FontWeight="SemiBold"
-                                               Foreground="{StaticResource Text}" Margin="4,0,0,0"/>
+                                               Foreground="{StaticResource TextSecondary}" Margin="4,0,0,0"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                    <TextBlock Text="Package:" FontSize="12"
-                                               Foreground="{StaticResource Subtext}"/>
+                                    <TextBlock Text="Package:" FontFamily="{StaticResource AppFont}"
+                                               FontSize="12" Foreground="{StaticResource TextTertiary}"/>
                                     <TextBlock Text="{Binding PackageTemp, StringFormat={}{0:F0}°C}"
+                                               FontFamily="{StaticResource AppFont}"
                                                FontSize="12" FontWeight="SemiBold"
-                                               Foreground="{StaticResource Text}" Margin="4,0,0,0"/>
+                                               Foreground="{StaticResource TextSecondary}" Margin="4,0,0,0"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                    <TextBlock Text="Load:" FontSize="12"
-                                               Foreground="{StaticResource Subtext}"/>
-                                    <TextBlock Text="{Binding CpuLoad, StringFormat={}{0:F1}%}"
+                                    <TextBlock Text="Load:" FontFamily="{StaticResource AppFont}"
+                                               FontSize="12" Foreground="{StaticResource TextTertiary}"/>
+                                    <TextBlock Text="{Binding CpuLoad, StringFormat={}{0:F0}%}"
+                                               FontFamily="{StaticResource AppFont}"
                                                FontSize="12" FontWeight="SemiBold"
-                                               Foreground="{StaticResource Text}" Margin="4,0,0,0"/>
+                                               Foreground="{StaticResource TextSecondary}" Margin="4,0,0,0"/>
                                 </StackPanel>
                             </StackPanel>
 
                             <!-- Divider -->
-                            <Border Grid.Column="1" Width="1" Background="{StaticResource Muted}"
+                            <Border Grid.Column="1" Width="1"
+                                    Background="{StaticResource CardStrokeDefault}"
                                     VerticalAlignment="Stretch" Margin="0,8"/>
 
                             <!-- CPU + Boost Info -->
                             <StackPanel Grid.Column="1" Margin="24,0,24,0" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding CpuName}" FontSize="17" FontWeight="SemiBold"
-                                           Foreground="{StaticResource Text}" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Text="{Binding CpuName}" FontFamily="{StaticResource AppFont}"
+                                           FontSize="20" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextPrimary}"
+                                           TextTrimming="CharacterEllipsis"/>
 
-                                <Border Background="{StaticResource Surface}" CornerRadius="8"
-                                        Padding="14,12" Margin="0,12,0,0">
+                                <Border Background="{StaticResource ControlFillDefault}"
+                                        BorderBrush="{StaticResource SurfaceStrokeDefault}"
+                                        BorderThickness="1"
+                                        CornerRadius="4" Padding="14,12" Margin="0,14,0,0">
                                     <StackPanel>
                                         <StackPanel Orientation="Horizontal">
                                             <Ellipse Width="10" Height="10" Margin="0,0,8,0"
                                                      VerticalAlignment="Center"
                                                      Fill="{Binding DataContext.BoostModeBrush, RelativeSource={RelativeSource AncestorType=Window}}"/>
-                                            <TextBlock Text="Boost Mode" FontSize="12"
-                                                       Foreground="{StaticResource Subtext}"/>
+                                            <TextBlock Text="Boost Mode" FontFamily="{StaticResource AppFont}"
+                                                       FontSize="12" Foreground="{StaticResource TextTertiary}"/>
                                         </StackPanel>
-                                        <TextBlock Text="{Binding BoostModeName}" FontSize="15"
-                                                   FontWeight="SemiBold" Foreground="{StaticResource Text}"
+                                        <TextBlock Text="{Binding BoostModeName}" FontFamily="{StaticResource AppFont}"
+                                                   FontSize="14" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextPrimary}"
                                                    Margin="0,4,0,0"/>
-                                        <TextBlock Text="{Binding BoostHexValue}" FontSize="11"
-                                                   Foreground="{StaticResource Muted}"
+                                        <TextBlock Text="{Binding BoostHexValue}"
                                                    FontFamily="Cascadia Code, Consolas, monospace"
+                                                   FontSize="12" Foreground="{StaticResource TextTertiary}"
                                                    Margin="0,4,0,0"/>
                                     </StackPanel>
                                 </Border>
 
                                 <!-- Aggressive Warning -->
-                                <Border Background="#2A1A2E" CornerRadius="8" Padding="14,10"
+                                <Border Background="#33E04343" CornerRadius="4" Padding="14,10"
                                         Margin="0,10,0,0"
                                         Visibility="{Binding IsAggressiveDetected, Converter={StaticResource BoolToVis}}">
-                                    <TextBlock Text="🚨 Aggressive boost mode is burning your CPU at idle. Fix it now."
-                                               Foreground="{StaticResource Red}" FontSize="13"
-                                               FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                    <TextBlock Text="Aggressive boost mode is burning your CPU at idle. Fix it now."
+                                               FontFamily="{StaticResource AppFont}"
+                                               Foreground="{StaticResource DangerDefault}"
+                                               FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"/>
                                 </Border>
                             </StackPanel>
 
@@ -280,9 +349,10 @@
                         </Grid>
                     </Border>
 
-                    <!-- PROFILE CARDS -->
-                    <TextBlock Text="Power Profiles" FontSize="15" FontWeight="SemiBold"
-                               Foreground="{StaticResource Text}" Margin="6,24,0,10"/>
+                    <!-- PROFILE CARDS: section header (subtitle) -->
+                    <TextBlock Text="Power Profiles" FontFamily="{StaticResource AppFont}"
+                               FontSize="20" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextPrimary}" Margin="4,24,0,12"/>
 
                     <ItemsControl ItemsSource="{Binding Profiles}">
                         <ItemsControl.ItemsPanel>
@@ -294,7 +364,9 @@
                             <DataTemplate>
                                 <Border x:Name="ProfileCard"
                                         Background="{Binding IsRecommended, Converter={StaticResource RecommendBg}}"
-                                        CornerRadius="12" Padding="18,14" Margin="0,0,0,8"
+                                        BorderBrush="{StaticResource CardStrokeDefault}"
+                                        BorderThickness="1"
+                                        CornerRadius="8" Padding="16,14" Margin="0,0,0,6"
                                         Cursor="Hand"
                                         MouseLeftButtonDown="ProfileCard_Click"
                                         Tag="{Binding}">
@@ -306,46 +378,52 @@
 
                                         <StackPanel Grid.Column="0">
                                             <StackPanel Orientation="Horizontal">
-                                                <Ellipse Width="16" Height="16" Stroke="#585B70" StrokeThickness="2"
+                                                <Ellipse Width="18" Height="18"
+                                                         Stroke="{StaticResource TextTertiary}"
+                                                         StrokeThickness="1.5"
                                                          VerticalAlignment="Center">
                                                     <Ellipse.Style>
                                                         <Style TargetType="Ellipse">
                                                             <Setter Property="Fill" Value="Transparent"/>
                                                             <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                                    <Setter Property="Fill" Value="{StaticResource Accent}"/>
-                                                                    <Setter Property="Stroke" Value="{StaticResource Accent}"/>
+                                                                    <Setter Property="Fill" Value="{StaticResource AccentDefault}"/>
+                                                                    <Setter Property="Stroke" Value="{StaticResource AccentDefault}"/>
                                                                 </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
                                                     </Ellipse.Style>
                                                 </Ellipse>
-                                                <TextBlock Text="{Binding Name}" FontSize="15"
-                                                           FontWeight="SemiBold" Foreground="{StaticResource Text}"
+                                                <TextBlock Text="{Binding Name}" FontFamily="{StaticResource AppFont}"
+                                                           FontSize="14" FontWeight="SemiBold"
+                                                           Foreground="{StaticResource TextPrimary}"
                                                            Margin="10,0,0,0"/>
-                                                <Border Background="{StaticResource Green}" CornerRadius="4"
-                                                        Padding="6,2" Margin="10,0,0,0"
+                                                <Border Background="{StaticResource PositiveGreen}"
+                                                        CornerRadius="4" Padding="6,2" Margin="10,0,0,0"
                                                         Visibility="{Binding IsRecommended, Converter={StaticResource BoolToVis}}">
-                                                    <TextBlock Text="RECOMMENDED" FontSize="9"
-                                                               FontWeight="Bold" Foreground="{StaticResource Bg}"/>
+                                                    <TextBlock Text="RECOMMENDED" FontFamily="{StaticResource AppFont}"
+                                                               FontSize="11" FontWeight="SemiBold"
+                                                               Foreground="#1A1A1A"/>
                                                 </Border>
                                             </StackPanel>
-                                            <TextBlock Text="{Binding Description}" FontSize="12"
-                                                       Foreground="{StaticResource Subtext}"
+                                            <TextBlock Text="{Binding Description}" FontFamily="{StaticResource AppFont}"
+                                                       FontSize="12" Foreground="{StaticResource TextSecondary}"
                                                        TextWrapping="Wrap" Margin="0,4,0,0"/>
                                             <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                                <TextBlock Text="{Binding UseCase}" FontSize="11"
-                                                           Foreground="{StaticResource Lavender}"/>
-                                                <TextBlock Text=" · " FontSize="11"
-                                                           Foreground="{StaticResource Muted}"/>
-                                                <TextBlock Text="Temps:" FontSize="11"
-                                                           Foreground="{StaticResource Subtext}"/>
-                                                <TextBlock Text="{Binding TempLabel}" FontSize="11"
-                                                           Foreground="{StaticResource Peach}" Margin="4,0,0,0"/>
+                                                <TextBlock Text="{Binding UseCase}" FontFamily="{StaticResource AppFont}"
+                                                           FontSize="12" Foreground="{StaticResource AccentDefault}"/>
+                                                <TextBlock Text=" · " FontFamily="{StaticResource AppFont}"
+                                                           FontSize="12" Foreground="{StaticResource TextTertiary}"/>
+                                                <TextBlock Text="Temps:" FontFamily="{StaticResource AppFont}"
+                                                           FontSize="12" Foreground="{StaticResource TextTertiary}"/>
+                                                <TextBlock Text="{Binding TempLabel}" FontFamily="{StaticResource AppFont}"
+                                                           FontSize="12" Foreground="{StaticResource WarningOrange}"
+                                                           Margin="4,0,0,0"/>
                                             </StackPanel>
                                         </StackPanel>
 
-                                        <Button Grid.Column="1" Content="Apply" Style="{StaticResource AccentBtn}"
+                                        <Button Grid.Column="1" Content="Apply"
+                                                Style="{StaticResource AccentBtn}"
                                                 VerticalAlignment="Center" Margin="12,0,0,0"
                                                 Tag="{Binding}"
                                                 Click="ApplyButton_Click"/>
@@ -354,21 +432,23 @@
 
                                 <DataTemplate.Triggers>
                                     <DataTrigger Binding="{Binding IsRecommended}" Value="True">
-                                        <Setter TargetName="ProfileCard" Property="Background" Value="{StaticResource CardHover}"/>
+                                        <Setter TargetName="ProfileCard" Property="Background" Value="{StaticResource ControlFillDefault}"/>
                                     </DataTrigger>
                                 </DataTemplate.Triggers>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
-                    <!-- Max CPU Slider -->
-                    <Border Background="{StaticResource CardBg}" CornerRadius="12"
-                            Padding="18,14" Margin="0,10,0,0">
+                    <!-- Max CPU Slider (Card) -->
+                    <Border Background="{StaticResource LayerFillDefault}"
+                            BorderBrush="{StaticResource CardStrokeDefault}"
+                            BorderThickness="1"
+                            CornerRadius="8" Padding="18,14" Margin="0,10,0,0">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <CheckBox x:Name="MaxCpuCheck" IsChecked="{Binding MaxCpuEnabled}"
                                           VerticalAlignment="Center" Content="Limit Max CPU Frequency"
-                                          FontWeight="SemiBold" FontSize="13"/>
+                                          FontWeight="SemiBold"/>
                             </StackPanel>
                             <Grid Margin="0,6,0,0">
                                 <Grid.ColumnDefinitions>
@@ -377,26 +457,31 @@
                                 </Grid.ColumnDefinitions>
                                 <Slider Grid.Column="0" Minimum="50" Maximum="100" TickFrequency="5"
                                         Value="{Binding MaxCpuPercent}"
-                                        IsSnapToTickEnabled="True"
                                         IsEnabled="{Binding MaxCpuEnabled}"
                                         VerticalAlignment="Center"/>
-                                <Border Grid.Column="1" Background="{StaticResource Surface}"
-                                        CornerRadius="6" Padding="10,4" Margin="12,0,0,0"
-                                        MinWidth="42">
+                                <Border Grid.Column="1"
+                                        Background="{StaticResource ControlFillDefault}"
+                                        BorderBrush="{StaticResource SurfaceStrokeDefault}"
+                                        BorderThickness="1"
+                                        CornerRadius="4" Padding="10,4" Margin="12,0,0,0"
+                                        MinWidth="44">
                                     <TextBlock Text="{Binding MaxCpuPercent, StringFormat={}{0}%}"
-                                               FontSize="13" FontWeight="SemiBold"
-                                               Foreground="{StaticResource Text}"
+                                               FontFamily="{StaticResource AppFont}"
+                                               FontSize="14" FontWeight="SemiBold"
+                                               Foreground="{StaticResource TextPrimary}"
                                                HorizontalAlignment="Center"/>
                                 </Border>
                             </Grid>
                             <TextBlock Text="Lower values reduce heat at the cost of peak performance. 99% disables turbo boost."
-                                       FontSize="11" Foreground="{StaticResource Muted}" Margin="0,4,0,0"/>
+                                       FontFamily="{StaticResource AppFont}"
+                                       FontSize="12" Foreground="{StaticResource TextTertiary}" Margin="0,4,0,0"/>
                         </StackPanel>
                     </Border>
 
-                    <!-- MONITORS -->
-                    <TextBlock Text="Connected Monitors" FontSize="15" FontWeight="SemiBold"
-                               Foreground="{StaticResource Text}" Margin="6,20,0,8"/>
+                    <!-- MONITORS: section header -->
+                    <TextBlock Text="Connected Monitors" FontFamily="{StaticResource AppFont}"
+                               FontSize="20" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextPrimary}" Margin="4,24,0,12"/>
 
                     <ItemsControl ItemsSource="{Binding Monitors}">
                         <ItemsControl.ItemsPanel>
@@ -406,17 +491,23 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="{StaticResource CardBg}" CornerRadius="10"
-                                        Padding="14,10" Margin="0,0,8,8" MinWidth="200">
+                                <Border Background="{StaticResource LayerFillDefault}"
+                                        BorderBrush="{StaticResource CardStrokeDefault}"
+                                        BorderThickness="1"
+                                        CornerRadius="8" Padding="14,10" Margin="0,0,8,8"
+                                        MinWidth="200">
                                     <StackPanel>
-                                        <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold"
-                                                   Foreground="{StaticResource Text}"
+                                        <TextBlock Text="{Binding Name}" FontFamily="{StaticResource AppFont}"
+                                                   FontSize="14" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextPrimary}"
                                                    TextTrimming="CharacterEllipsis"/>
-                                        <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                                             <TextBlock Text="{Binding CurrentRefreshRate, StringFormat={}{0}Hz}"
+                                                       FontFamily="{StaticResource AppFont}"
                                                        FontSize="12" FontWeight="SemiBold"
-                                                       Foreground="{StaticResource Subtext}"/>
-                                            <TextBlock Text="{Binding RefreshWarning}" FontSize="12"
+                                                       Foreground="{StaticResource TextSecondary}"/>
+                                            <TextBlock Text="{Binding RefreshWarning}" FontFamily="{StaticResource AppFont}"
+                                                       FontSize="12"
                                                        Foreground="{Binding IsAbove60Hz, Converter={StaticResource WarnColor}}"
                                                        Margin="8,0,0,0"/>
                                         </StackPanel>
@@ -427,11 +518,14 @@
                     </ItemsControl>
 
                     <TextBlock Text="High refresh rates on external monitors keep the iGPU busy, adding ~5°C per monitor above 60Hz."
-                               FontSize="11" Foreground="{StaticResource Muted}" Margin="8,0,0,0" TextWrapping="Wrap"/>
+                               FontFamily="{StaticResource AppFont}"
+                               FontSize="12" Foreground="{StaticResource TextTertiary}"
+                               Margin="8,0,0,0" TextWrapping="Wrap"/>
 
-                    <!-- UTILITIES -->
-                    <TextBlock Text="Utilities" FontSize="15" FontWeight="SemiBold"
-                               Foreground="{StaticResource Text}" Margin="6,20,0,8"/>
+                    <!-- UTILITIES: section header -->
+                    <TextBlock Text="Utilities" FontFamily="{StaticResource AppFont}"
+                               FontSize="20" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextPrimary}" Margin="4,24,0,12"/>
 
                     <StackPanel Orientation="Horizontal">
                         <Button Content="Unhide Setting in Windows UI" Style="{StaticResource SmallBtn}"
@@ -441,21 +535,24 @@
                     </StackPanel>
 
                     <TextBlock Text="Unhide makes the setting appear in Control Panel → Power Options → Advanced. Survive Updates creates a scheduled task to re-apply settings after Windows feature updates."
-                               FontSize="11" Foreground="{StaticResource Muted}"
-                               Margin="8,4,0,16" TextWrapping="Wrap"/>
+                               FontFamily="{StaticResource AppFont}"
+                               FontSize="12" Foreground="{StaticResource TextTertiary}"
+                               Margin="8,6,0,16" TextWrapping="Wrap"/>
 
                 </StackPanel>
             </ScrollViewer>
 
             <!-- ===== STATUS BAR ===== -->
             <Border Grid.Row="2" Background="{StaticResource StatusBarBg}"
-                    CornerRadius="0,0,14,14" Padding="16,8">
+                    Padding="16,8">
                 <Grid>
-                    <TextBlock Text="{Binding StatusMessage}" FontSize="12"
-                               Foreground="{StaticResource Subtext}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding StatusMessage}" FontFamily="{StaticResource AppFont}"
+                               FontSize="12" Foreground="{StaticResource TextTertiary}"
+                               VerticalAlignment="Center"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                        <TextBlock Text="PPBM v1.0 · Run as Administrator" FontSize="11"
-                                   Foreground="{StaticResource Muted}" VerticalAlignment="Center"/>
+                        <TextBlock Text="PPBM v1.0 · Run as Administrator" FontFamily="{StaticResource AppFont}"
+                                   FontSize="11" Foreground="{StaticResource TextTertiary}"
+                                   VerticalAlignment="Center"/>
                     </StackPanel>
                 </Grid>
             </Border>
