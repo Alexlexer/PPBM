@@ -28,17 +28,20 @@ jobs:
         run: dotnet build PPBM/PPBM.csproj -c Release --no-restore
 
       - name: Publish
-        run: dotnet publish PPBM/PPBM.csproj -c Release -r win-x64 -p:PublishSingleFile=true --self-contained true -o ./publish
+        run: dotnet publish PPBM/PPBM.csproj -c Release -r win-x64 --self-contained true -o ./publish
+
+      - name: Zip publish output
+        run: Compress-Archive -Path ./publish/* -DestinationPath ./PPBM-win-x64.zip
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: PPBM-win-x64
-          path: ./publish/PPBM.exe
+          path: ./PPBM-win-x64.zip
 
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: ./publish/PPBM.exe
+          files: ./PPBM-win-x64.zip
           generate_release_notes: true
