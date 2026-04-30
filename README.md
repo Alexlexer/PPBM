@@ -37,7 +37,7 @@ PPBM surfaces this hidden setting and lets you switch to cooler modes. It also d
 
 ### Download
 
-Download the latest release from the [Releases](https://github.com/AlexKven/PPBM/releases) page. Extract the zip and run `PPBM.exe`.
+Download the latest release from the [Releases](https://github.com/Alexlexer/PPBM/releases) page. Extract the zip and run `PPBM.exe`.
 
 ### Build from Source
 
