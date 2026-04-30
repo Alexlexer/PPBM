@@ -8,5 +8,5 @@ public record MonitorInfo(
     bool IsAbove60Hz
 )
 {
-    public string RefreshWarning => IsAbove60Hz ? "⚠️ Consider lowering to 60Hz" : "✅ OK";
+    public string RefreshWarning => IsAbove60Hz ? "Warning: Consider lowering to 60Hz" : "OK";
 }
