@@ -29,12 +29,12 @@ jobs:
         run: dotnet restore PPBM/PPBM.csproj
       - name: Publish
         run: |
-          echo "Publishing for RID=${{ matrix.rid }} type=${{ matrix.type }}"
-          if [ "${{ matrix.type }}" = "selfcontained" ]; then
+          Write-Host "Publishing for RID=${{ matrix.rid }} type=${{ matrix.type }}"
+          if ("${{ matrix.type }}" -eq "selfcontained") {
             dotnet publish PPBM/PPBM.csproj -c Release -r ${{ matrix.rid }} -o publish --self-contained true /p:PublishSingleFile=true /p:PublishTrimmed=false /p:PublishReadyToRun=false /p:DebugType=None /p:DebugSymbols=false /p:EnableCompressionInSingleFile=true
-          else
+          } else {
             dotnet publish PPBM/PPBM.csproj -c Release -r ${{ matrix.rid }} -o publish --self-contained false /p:PublishSingleFile=false /p:PublishTrimmed=false /p:PublishReadyToRun=false /p:DebugType=None /p:DebugSymbols=false
-          fi
+          }
       - name: List publish output
         run: |
           echo "Publish output for ${{ matrix.rid }} (${{ matrix.type }}):";
