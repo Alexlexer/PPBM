@@ -6,13 +6,13 @@ using WColor = System.Windows.Media.Color;
 namespace PPBM.Converters;
 
 /// <summary>
-/// Converts a boolean warning flag to a foreground <see cref="SolidColorBrush"/>:
-/// <c>true</c> returns red, <c>false</c> returns green.
+/// Converts a boolean warning flag to a foreground color brush using the monochrome palette:
+/// <c>true</c> (warning) returns light gray (#888888), <c>false</c> (OK) returns tertiary gray (#606060).
 /// </summary>
 public class WarnColorConverter : IValueConverter
 {
-    private static readonly SolidColorBrush WarnColor = new(WColor.FromRgb(0xE0, 0x43, 0x43));
-    private static readonly SolidColorBrush OkColor = new(WColor.FromRgb(0x6B, 0xCB, 0x77));
+    private static readonly SolidColorBrush WarnColor = new(WColor.FromRgb(0x88, 0x88, 0x88));
+    private static readonly SolidColorBrush OkColor = new(WColor.FromRgb(0x60, 0x60, 0x60));
 
     /// <inheritdoc />
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)

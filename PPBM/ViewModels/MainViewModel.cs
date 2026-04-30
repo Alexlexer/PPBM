@@ -11,8 +11,8 @@ using WColor = System.Windows.Media.Color;
 namespace PPBM.ViewModels;
 
 /// <summary>
-/// Primary ViewModel for the PPBM main window. Manages power profiles, CPU thermal monitoring,
-/// boost mode detection, monitor enumeration, and scheduled task persistence.
+/// Primary ViewModel for the PPBM main window. Manages navigation, power profiles,
+/// CPU thermal monitoring, boost mode detection, monitor enumeration, and scheduled task persistence.
 /// </summary>
 public class MainViewModel : INotifyPropertyChanged
 {
@@ -23,20 +23,17 @@ public class MainViewModel : INotifyPropertyChanged
     private PerformanceCounter[] _thermalCounters = [];
     private bool _thermalReady;
 
-    private static readonly SolidColorBrush TempCold = new(WColor.FromRgb(0x6B, 0xCB, 0x77));
-    private static readonly SolidColorBrush TempWarm = new(WColor.FromRgb(0xFF, 0xD1, 0x66));
-    private static readonly SolidColorBrush TempHot = new(WColor.FromRgb(0xFF, 0x8C, 0x42));
-    private static readonly SolidColorBrush TempCritical = new(WColor.FromRgb(0xE0, 0x43, 0x43));
-    private static readonly SolidColorBrush BoostNormal = new(WColor.FromRgb(0x60, 0xCD, 0xFF));
-    private static readonly SolidColorBrush BoostDisabled = new(WColor.FromRgb(0x6B, 0xCB, 0x77));
-    private static readonly SolidColorBrush BoostAggressive = new(WColor.FromRgb(0xE0, 0x43, 0x43));
+    private static readonly SolidColorBrush TempCold = new(WColor.FromRgb(0xC0, 0xC0, 0xC0));
+    private static readonly SolidColorBrush TempWarm = new(WColor.FromRgb(0xE0, 0xE0, 0xE0));
+    private static readonly SolidColorBrush TempHot = new(WColor.FromRgb(0xF0, 0xF0, 0xF0));
+    private static readonly SolidColorBrush TempCritical = new(WColor.FromRgb(0xF0, 0xF0, 0xF0));
+    private static readonly SolidColorBrush BoostDotOk = new(WColor.FromRgb(0xB0, 0xB0, 0xB0));
+    private static readonly SolidColorBrush BoostDotWarn = new(WColor.FromRgb(0x80, 0x80, 0x80));
+    private static readonly SolidColorBrush BoostDotDanger = new(WColor.FromRgb(0xF0, 0xF0, 0xF0));
 
     /// <summary>
     /// Initializes a new instance of <see cref="MainViewModel"/> using injected services.
     /// </summary>
-    /// <param name="powerConfig">Power configuration service.</param>
-    /// <param name="monitor">Monitor enumeration service.</param>
-    /// <param name="scheduledTask">Scheduled task service.</param>
     public MainViewModel(IPowerConfigService powerConfig, IMonitorService monitor, IScheduledTaskService scheduledTask)
     {
         _powerConfig = powerConfig;
@@ -52,14 +49,39 @@ public class MainViewModel : INotifyPropertyChanged
         UnhideCommand = new RelayCommand(async _ => await UnhideAsync());
         ToggleSurviveUpdatesCommand = new RelayCommand(async _ => await ToggleSurviveUpdatesAsync());
         SelectProfileCommand = new RelayCommand(obj => { if (obj is PowerProfile p) SelectedProfile = p; return Task.CompletedTask; });
+        NavigateCommand = new RelayCommand(obj =>
+        {
+            if (obj is string page) ActivePage = page;
+            return Task.CompletedTask;
+        });
+        OpenLogCommand = new RelayCommand(_ =>
+        {
+            var logPath = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "PPBM", "debug.log");
+            try
+            {
+                if (System.IO.File.Exists(logPath))
+                    Process.Start(new ProcessStartInfo(logPath) { UseShellExecute = true });
+            }
+            catch { }
+            return Task.CompletedTask;
+        });
+
+        NavigationItems =
+        [
+            new NavItem { PageName = "Dashboard", Label = "Dashboard", IconGlyph = "\uEC00" },
+            new NavItem { PageName = "Profiles", Label = "Power Profiles", IconGlyph = "\uE8FD" },
+            new NavItem { PageName = "Monitors", Label = "Monitors", IconGlyph = "\uE7F4" },
+            new NavItem { PageName = "Utilities", Label = "Utilities", IconGlyph = "\uE713" },
+            new NavItem { PageName = "About", Label = "About", IconGlyph = "\uE946", IsBottom = true }
+        ];
+        ActivePage = "Dashboard";
 
         _pollTimer = new System.Timers.Timer(2000);
         _pollTimer.Elapsed += async (_, _) =>
         {
-            try
-            {
-                await PollTempsAsync();
-            }
+            try { await PollTempsAsync(); }
             catch { }
         };
         _pollTimer.AutoReset = true;
@@ -82,12 +104,66 @@ public class MainViewModel : INotifyPropertyChanged
         });
 
         _pollTimer.Start();
-
         _ = RefreshAsync();
     }
 
     /// <inheritdoc />
     public event PropertyChangedEventHandler? PropertyChanged;
+
+    /// <summary>Available navigation items for the sidebar.</summary>
+    public ObservableCollection<NavItem> NavigationItems { get; }
+
+    /// <summary>The currently active page name.</summary>
+    public string ActivePage
+    {
+        get => field;
+        set
+        {
+            if (field == value) return;
+            field = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsDashboardVisible));
+            OnPropertyChanged(nameof(IsProfilesVisible));
+            OnPropertyChanged(nameof(IsMonitorsVisible));
+            OnPropertyChanged(nameof(IsUtilitiesVisible));
+            foreach (var item in NavigationItems)
+                item.IsActive = item.PageName == value;
+        }
+    }
+
+    /// <summary>Visibility helper for Dashboard page.</summary>
+    public System.Windows.Visibility IsDashboardVisible => ActivePage == "Dashboard"
+        ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+
+    /// <summary>Visibility helper for Profiles page.</summary>
+    public System.Windows.Visibility IsProfilesVisible => ActivePage == "Profiles"
+        ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+
+    /// <summary>Visibility helper for Monitors page.</summary>
+    public System.Windows.Visibility IsMonitorsVisible => ActivePage == "Monitors"
+        ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+
+    /// <summary>Visibility helper for Utilities page.</summary>
+    public System.Windows.Visibility IsUtilitiesVisible => ActivePage == "Utilities"
+        ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+
+    /// <summary>Status pill text for boost mode indicator.</summary>
+    public string BoostStatusText => CurrentBoostMode switch
+    {
+        BoostMode.Aggressive => "Aggressive Mode Active",
+        BoostMode.Disabled => "Disabled — Cool & Quiet",
+        _ => $"{BoostModeName} Active"
+    };
+
+    /// <summary>Status pill dot color for boost mode.</summary>
+    public SolidColorBrush BoostStatusDot => CurrentBoostMode switch
+    {
+        BoostMode.Aggressive => new SolidColorBrush(WColor.FromRgb(0xF0, 0xF0, 0xF0)),
+        BoostMode.Disabled => new SolidColorBrush(WColor.FromRgb(0xC0, 0xC0, 0xC0)),
+        _ => new SolidColorBrush(WColor.FromRgb(0x80, 0x80, 0x80))
+    };
+
+    /// <summary>Commands and data properties — see original for full listing.</summary>
 
     /// <summary>Available power profiles for selection.</summary>
     public ObservableCollection<PowerProfile> Profiles
@@ -121,8 +197,11 @@ public class MainViewModel : INotifyPropertyChanged
     public string StatusMessage
     {
         get => field;
-        set { field = value; OnPropertyChanged(); }
+        set { field = value; OnPropertyChanged(); OnPropertyChanged(nameof(StatusTimestamp)); }
     } = "Ready";
+
+    /// <summary>Timestamp for last status update.</summary>
+    public string StatusTimestamp => $"Ready · Last refreshed {DateTime.Now:HH:mm:ss}";
 
     /// <summary>Current Processor Performance Boost Mode.</summary>
     public BoostMode CurrentBoostMode
@@ -134,27 +213,38 @@ public class MainViewModel : INotifyPropertyChanged
             OnPropertyChanged();
             OnPropertyChanged(nameof(BoostModeName));
             OnPropertyChanged(nameof(IsBoostModeBad));
-            OnPropertyChanged(nameof(BoostModeBrush));
+            OnPropertyChanged(nameof(BoostDotColor));
+            OnPropertyChanged(nameof(BoostDotClass));
+            OnPropertyChanged(nameof(BoostStatusText));
+            OnPropertyChanged(nameof(BoostStatusDot));
         }
     }
 
     /// <summary>Human-readable name of the current boost mode.</summary>
     public string BoostModeName => CurrentBoostMode switch
     {
-        BoostMode.Disabled => "Disabled (Cool & Quiet)",
-        BoostMode.Enabled => "Enabled (Balanced)",
-        BoostMode.Aggressive => "Aggressive (HOT)",
-        BoostMode.EfficientEnabled => "Efficient Enabled (Gaming)",
-        BoostMode.EfficientAggressive => "Efficient Aggressive (Rendering)",
+        BoostMode.Disabled => "Disabled",
+        BoostMode.Enabled => "Enabled",
+        BoostMode.Aggressive => "Aggressive",
+        BoostMode.EfficientEnabled => "Efficient Enabled",
+        BoostMode.EfficientAggressive => "Efficient Aggressive",
         _ => "Unknown"
     };
 
-    /// <summary>Color brush representing the current boost mode severity.</summary>
-    public SolidColorBrush BoostModeBrush => CurrentBoostMode switch
+    /// <summary>Dot color for the boost mode indicator in hero card.</summary>
+    public SolidColorBrush BoostDotColor => CurrentBoostMode switch
     {
-        BoostMode.Aggressive => BoostAggressive,
-        BoostMode.Disabled => BoostDisabled,
-        _ => BoostNormal
+        BoostMode.Aggressive => BoostDotDanger,
+        BoostMode.Disabled => BoostDotOk,
+        _ => BoostDotWarn
+    };
+
+    /// <summary>CSS-style class for boost dot (used in template triggers).</summary>
+    public string BoostDotClass => CurrentBoostMode switch
+    {
+        BoostMode.Aggressive => "danger",
+        BoostMode.Disabled => "ok",
+        _ => "warn"
     };
 
     /// <summary>Indicates whether the current boost mode is the problematic Aggressive mode.</summary>
@@ -178,15 +268,34 @@ public class MainViewModel : INotifyPropertyChanged
     public float? PackageTemp
     {
         get => field;
-        set { field = value; OnPropertyChanged(); OnPropertyChanged(nameof(CoreTempDisplay)); UpdateTempDisplay(); }
+        set { field = value; OnPropertyChanged(); OnPropertyChanged(nameof(CoreTempDisplay)); OnPropertyChanged(nameof(TempColor)); OnPropertyChanged(nameof(TempClass)); UpdateTempDisplay(); }
     }
 
     /// <summary>Maximum core temperature in Celsius.</summary>
     public float? MaxCoreTemp
     {
         get => field;
-        set { field = value; OnPropertyChanged(); OnPropertyChanged(nameof(CoreTempDisplay)); UpdateTempDisplay(); }
+        set { field = value; OnPropertyChanged(); OnPropertyChanged(nameof(CoreTempDisplay)); OnPropertyChanged(nameof(TempColor)); OnPropertyChanged(nameof(TempClass)); UpdateTempDisplay(); }
     }
+
+    /// <summary>Temperature color brush for hero display.</summary>
+    public SolidColorBrush TempColor => (PackageTemp ?? MaxCoreTemp) switch
+    {
+        null => new SolidColorBrush(WColor.FromRgb(0xC0, 0xC0, 0xC0)),
+        < 50 => TempCold,
+        < 70 => TempWarm,
+        < 85 => TempHot,
+        _ => TempCritical
+    };
+
+    /// <summary>Temperature CSS-style class.</summary>
+    public string TempClass => (PackageTemp ?? MaxCoreTemp) switch
+    {
+        null => "cool",
+        < 50 => "cool",
+        < 70 => "warm",
+        _ => "hot"
+    };
 
     /// <summary>Current CPU load as a percentage.</summary>
     public float? CpuLoad
@@ -217,23 +326,24 @@ public class MainViewModel : INotifyPropertyChanged
     }
 
     /// <summary>Label for the survive-updates toggle button.</summary>
-    public string SurviveButtonText => SurviveUpdatesEnabled
-        ? "Survive Updates: ON"
-        : "Enable Survive Updates";
+    public string SurviveButtonText => SurviveUpdatesEnabled ? "Disable" : "Enable";
 
     /// <summary>Hex representation of the current boost mode value.</summary>
     public string BoostHexValue
     {
         get => field;
         set { field = value; OnPropertyChanged(); }
-    } = "0x00000002";
+    } = "GUID: be337238-0d82-4146-a960-4f3749d470c7  ·  Value: 0x00000002";
 
     /// <summary>Maximum CPU frequency percentage (50-100).</summary>
     public int MaxCpuPercent
     {
         get => field;
-        set { field = Math.Clamp(value, 50, 100); OnPropertyChanged(); }
+        set { field = Math.Clamp(value, 50, 100); OnPropertyChanged(); OnPropertyChanged(nameof(SliderPercent)); }
     }
+
+    /// <summary>Format string for slider fill.</summary>
+    public double SliderPercent => ((MaxCpuPercent - 50.0) / 50.0) * 100.0;
 
     /// <summary>Whether the max CPU frequency limiter is enabled.</summary>
     public bool MaxCpuEnabled
@@ -269,13 +379,19 @@ public class MainViewModel : INotifyPropertyChanged
     /// <summary>Command to select a power profile.</summary>
     public ICommand SelectProfileCommand { get; }
 
+    /// <summary>Command to switch pages via navigation.</summary>
+    public ICommand NavigateCommand { get; }
+
+    /// <summary>Command to open the debug log file.</summary>
+    public ICommand OpenLogCommand { get; }
+
     /// <summary>Formatted temperature display string (e.g. "45°").</summary>
     public string CoreTempDisplay
     {
         get
         {
             var t = PackageTemp ?? MaxCoreTemp;
-            return t is null ? "--°" : $"{t.Value:F0}°";
+            return t is null ? "--°C" : $"{t.Value:F0}°C";
         }
     }
 
@@ -287,7 +403,7 @@ public class MainViewModel : INotifyPropertyChanged
         var mode = await _powerConfig.GetCurrentBoostModeAsync();
         CurrentBoostMode = mode;
         IsAggressiveDetected = mode == BoostMode.Aggressive;
-        BoostHexValue = $"0x{((int)mode):X8}";
+        BoostHexValue = $"GUID: be337238-0d82-4146-a960-4f3749d470c7  ·  Value: 0x{((int)mode):X8}";
 
         var monitors = await Task.Run(_monitor.GetMonitors);
         var surviveEnabled = await Task.Run(_scheduledTask.IsTaskInstalled);
@@ -297,8 +413,8 @@ public class MainViewModel : INotifyPropertyChanged
         await PollTempsAsync();
 
         StatusMessage = IsAggressiveDetected
-            ? "Aggressive boost mode detected -- causing high idle temps!"
-            : $"Current mode: {BoostModeName} -- all good!";
+            ? "Aggressive boost mode detected — high idle temps!"
+            : "Ready";
 
         IsBusy = false;
     }
@@ -468,7 +584,7 @@ public class MainViewModel : INotifyPropertyChanged
         {
             _scheduledTask.UninstallTask();
             SurviveUpdatesEnabled = false;
-            StatusMessage = "Survive updates task removed.";
+            StatusMessage = "Survive Updates disabled.";
         }
         else
         {
@@ -478,7 +594,7 @@ public class MainViewModel : INotifyPropertyChanged
 
             SurviveUpdatesEnabled = success;
             StatusMessage = success
-                ? "Will auto-reapply after Windows updates & login."
+                ? "Survive Updates enabled — scheduled task created."
                 : "Failed to create task.";
         }
 
@@ -486,7 +602,6 @@ public class MainViewModel : INotifyPropertyChanged
     }
 
     /// <summary>Raises the <see cref="PropertyChanged"/> event.</summary>
-    /// <param name="name">Name of the property that changed (auto-filled by caller).</param>
     protected void OnPropertyChanged([CallerMemberName] string? name = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }

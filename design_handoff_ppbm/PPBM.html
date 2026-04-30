@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PPBM – Processor Performance Boost Mode Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:            #111111;
+    --mica:          #161616;
+    --layer:         #1e1e1e;
+    --layer2:        #242424;
+    --layer-hover:   #2a2a2a;
+    --stroke:        #2e2e2e;
+    --stroke2:       #3a3a3a;
+    --text-pri:      #f0f0f0;
+    --text-sec:      #a0a0a0;
+    --text-ter:      #606060;
+    --text-dis:      #404040;
+    --accent:        #e0e0e0;
+    --accent-hover:  #f0f0f0;
+    --accent-press:  #c8c8c8;
+    --accent-bg:     rgba(255,255,255,0.07);
+    --accent-bg2:    rgba(255,255,255,0.04);
+    --danger:        #c8c8c8;
+    --danger-hover:  #e0e0e0;
+    --danger-bg:     rgba(255,255,255,0.06);
+    --green:         #b0b0b0;
+    --green-bg:      rgba(255,255,255,0.05);
+    --orange:        #909090;
+    --orange-bg:     rgba(255,255,255,0.05);
+    --titlebar:      #0e0e0e;
+    --nav-w:         220px;
+    --radius:        8px;
+    --font: 'Noto Sans', 'Segoe UI Variable', 'Segoe UI', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%; height: 100vh;
+    margin: 0; padding: 0;
+    overflow: hidden;
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text-pri);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── WINDOW CHROME ── */
+  .window {
+    display: flex;
+    flex-direction: column;
+    width: 100%; height: 100vh;
+    overflow: hidden;
+  }
+
+  .titlebar {
+    display: flex; align-items: center;
+    height: 36px;
+    background: var(--titlebar);
+    flex-shrink: 0;
+    user-select: none;
+    -webkit-app-region: drag;
+  }
+  .titlebar-app {
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 14px;
+    flex: 1;
+  }
+  .titlebar-icon {
+    width: 16px; height: 16px;
+    background: var(--accent);
+    border-radius: 3px;
+    display: grid; place-items: center;
+    flex-shrink: 0;
+  }
+  .titlebar-icon svg { width: 10px; height: 10px; fill: #003349; }
+  .titlebar-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-sec);
+    letter-spacing: 0.01em;
+  }
+  .titlebar-buttons {
+    display: flex;
+    -webkit-app-region: no-drag;
+  }
+  .tb-btn {
+    width: 46px; height: 36px;
+    border: none; background: transparent;
+    color: var(--text-sec); cursor: pointer;
+    display: grid; place-items: center;
+    font-size: 10px;
+    transition: background 0.1s;
+  }
+  .tb-btn:hover { background: rgba(255,255,255,.08); }
+  .tb-btn.close:hover { background: #c42b1c; color: white; }
+  .tb-btn svg { width: 10px; height: 10px; fill: currentColor; }
+
+  /* ── SHELL ── */
+  .shell {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--mica);
+  }
+
+  /* ── NAV PANE ── */
+  .nav {
+    width: var(--nav-w);
+    background: rgba(255,255,255,0.025);
+    border-right: 1px solid var(--stroke);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    padding: 8px 0;
+  }
+  .nav-section-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-ter);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 12px 16px 4px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 9px 16px;
+    cursor: pointer;
+    border-radius: 6px;
+    margin: 1px 6px;
+    color: var(--text-sec);
+    font-size: 13px;
+    font-weight: 400;
+    transition: background 0.12s, color 0.12s;
+    position: relative;
+  }
+  .nav-item:hover { background: rgba(255,255,255,.06); color: var(--text-pri); }
+  .nav-item.active {
+    background: rgba(255,255,255,.08);
+    color: var(--text-pri);
+    font-weight: 500;
+  }
+  .nav-item.active::before {
+    content: '';
+    position: absolute; left: 2px; top: 50%;
+    transform: translateY(-50%);
+    width: 3px; height: 18px;
+    background: var(--text-pri);
+    border-radius: 0 2px 2px 0;
+  }
+  .nav-item svg { width: 16px; height: 16px; fill: currentColor; flex-shrink: 0; }
+  .nav-spacer { flex: 1; }
+  .nav-bottom {
+    border-top: 1px solid var(--stroke);
+    padding-top: 8px;
+    margin-top: 4px;
+  }
+
+  /* ── CONTENT ── */
+  .content {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 28px 28px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .content::-webkit-scrollbar { width: 6px; }
+  .content::-webkit-scrollbar-track { background: transparent; }
+  .content::-webkit-scrollbar-thumb { background: var(--stroke2); border-radius: 3px; }
+
+  /* ── PAGE HEADER ── */
+  .page-header { margin-bottom: 20px; }
+  .page-title {
+    font-size: 24px; font-weight: 600;
+    color: var(--text-pri);
+    letter-spacing: -0.01em;
+  }
+  .page-subtitle {
+    font-size: 12px;
+    color: var(--text-ter);
+    margin-top: 2px;
+  }
+
+  /* ── SECTION LABEL ── */
+  .section-label {
+    font-size: 13px; font-weight: 600;
+    color: var(--text-sec);
+    margin: 20px 0 8px;
+    letter-spacing: 0.01em;
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--layer);
+    border: 1px solid var(--stroke);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .card + .card { margin-top: 2px; }
+
+  /* ── HERO CARD ── */
+  .hero-card {
+    background: var(--layer);
+    border: 1px solid var(--stroke);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    display: grid;
+    grid-template-columns: auto 1px 1fr auto;
+    gap: 0 20px;
+    margin-bottom: 4px;
+  }
+
+  .hero-temp-block { display: flex; flex-direction: column; gap: 0; min-width: 100px; }
+  .hero-temp-label { font-size: 11px; font-weight: 600; color: var(--text-ter); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 2px; }
+  .hero-temp-value { font-size: 52px; font-weight: 300; line-height: 1; letter-spacing: -2px; }
+  .hero-temp-value.cool { color: #c0c0c0; }
+  .hero-temp-value.warm { color: #e0e0e0; }
+  .hero-temp-value.hot  { color: #f0f0f0; }
+  .hero-temp-meta { margin-top: 8px; display: flex; flex-direction: column; gap: 2px; }
+  .hero-meta-row { display: flex; gap: 6px; align-items: baseline; }
+  .hero-meta-key { font-size: 11px; color: var(--text-ter); }
+  .hero-meta-val { font-size: 12px; font-weight: 500; color: var(--text-sec); }
+
+  .hero-divider { background: var(--stroke); align-self: stretch; margin: 4px 0; }
+
+  .hero-info { display: flex; flex-direction: column; justify-content: center; gap: 10px; }
+  .hero-cpu-name { font-size: 18px; font-weight: 600; color: var(--text-pri); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .boost-infobox {
+    background: rgba(255,255,255,.04);
+    border: 1px solid var(--stroke);
+    border-radius: 6px;
+    padding: 10px 14px;
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .boost-infobox-top { display: flex; align-items: center; gap: 7px; }
+  .boost-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .boost-dot.ok { background: #b0b0b0; }
+  .boost-dot.warn { background: #808080; }
+  .boost-dot.danger { background: #f0f0f0; box-shadow: 0 0 5px rgba(255,255,255,0.3); }
+  .boost-infobox-mode-label { font-size: 11px; color: var(--text-ter); }
+  .boost-infobox-mode-name { font-size: 14px; font-weight: 600; color: var(--text-pri); }
+  .boost-infobox-hex { font-size: 11px; color: var(--text-ter); font-family: 'Cascadia Code', 'Consolas', monospace; margin-top: 2px; }
+
+  .alert-banner {
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.10);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-sec);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .alert-banner svg { width: 16px; height: 16px; fill: var(--text-sec); flex-shrink: 0; }
+
+  .hero-actions { display: flex; flex-direction: column; gap: 8px; justify-content: center; width: 170px; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 7px;
+    border: none; border-radius: 6px;
+    font-family: var(--font); font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: background 0.12s, opacity 0.12s;
+    padding: 8px 16px;
+    white-space: nowrap;
+  }
+  .btn svg { width: 14px; height: 14px; fill: currentColor; }
+  .btn-accent { background: rgba(255,255,255,0.12); color: var(--text-pri); border: 1px solid var(--stroke2); }
+  .btn-accent:hover { background: rgba(255,255,255,0.18); }
+  .btn-accent:active { background: rgba(255,255,255,0.08); }
+  .btn-danger { background: rgba(255,255,255,0.10); color: var(--text-pri); border: 1px solid rgba(255,255,255,0.2); }
+  .btn-danger:hover { background: rgba(255,255,255,0.16); }
+  .btn-ghost {
+    background: rgba(255,255,255,.05);
+    border: 1px solid var(--stroke);
+    color: var(--text-sec);
+  }
+  .btn-ghost:hover { background: rgba(255,255,255,.09); color: var(--text-pri); }
+  .btn-sm { font-size: 12px; padding: 6px 14px; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── PROFILE LIST ── */
+  .profile-list { display: flex; flex-direction: column; gap: 2px; }
+  .profile-item {
+    background: var(--layer);
+    border: 1px solid var(--stroke);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: grid;
+    grid-template-columns: 24px 1fr auto;
+    gap: 0 12px;
+    align-items: center;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+    position: relative;
+  }
+  .profile-item:hover { background: var(--layer-hover); }
+  .profile-item.selected {
+    background: var(--accent-bg2);
+    border-color: rgba(255,255,255,.12);
+  }
+  .profile-item.recommended {
+    border-color: rgba(255,255,255,.08);
+  }
+
+  .radio-circle {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    border: 2px solid var(--stroke2);
+    display: grid; place-items: center;
+    flex-shrink: 0;
+    transition: border-color 0.1s, background 0.1s;
+  }
+  .radio-circle.selected {
+    border-color: var(--text-pri);
+    background: var(--text-pri);
+  }
+  .radio-circle.selected::after {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #111111;
+  }
+
+  .profile-body { display: flex; flex-direction: column; gap: 2px; }
+  .profile-name-row { display: flex; align-items: center; gap: 8px; }
+  .profile-name { font-size: 14px; font-weight: 600; color: var(--text-pri); }
+  .badge {
+    font-size: 10px; font-weight: 700;
+    padding: 2px 7px; border-radius: 4px;
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .badge-green { background: rgba(255,255,255,.06); color: #c0c0c0; border: 1px solid rgba(255,255,255,.12); }
+  .badge-orange { background: rgba(255,255,255,.04); color: #888888; border: 1px solid rgba(255,255,255,.08); }
+  .badge-red { background: rgba(255,255,255,.04); color: #707070; border: 1px solid rgba(255,255,255,.08); }
+
+  .profile-desc { font-size: 12px; color: var(--text-sec); }
+  .profile-meta { display: flex; gap: 6px; align-items: center; margin-top: 2px; }
+  .profile-use-case { font-size: 11px; color: var(--text-ter); }
+  .profile-sep { font-size: 11px; color: var(--text-dis); }
+  .profile-temp { font-size: 11px; color: var(--text-ter); }
+  .profile-temp span { color: var(--text-sec); font-weight: 500; }
+
+  /* ── SETTING ROW (Settings-app style) ── */
+  .setting-row {
+    display: flex; align-items: center; gap: 16px;
+    padding: 14px 16px;
+    background: var(--layer);
+    border-bottom: 1px solid var(--stroke);
+  }
+  .setting-row:last-child { border-bottom: none; }
+  .setting-row-icon {
+    width: 32px; height: 32px;
+    border-radius: 6px;
+    display: grid; place-items: center;
+    flex-shrink: 0;
+  }
+  .setting-row-icon svg { width: 16px; height: 16px; fill: currentColor; }
+  .setting-row-body { flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .setting-row-title { font-size: 13px; font-weight: 500; color: var(--text-pri); }
+  .setting-row-sub { font-size: 12px; color: var(--text-ter); }
+  .setting-row-control { flex-shrink: 0; }
+
+  /* ── TOGGLE ── */
+  .toggle {
+    position: relative; width: 40px; height: 22px;
+    cursor: pointer;
+  }
+  .toggle input { display: none; }
+  .toggle-track {
+    width: 40px; height: 22px;
+    border-radius: 11px;
+    background: var(--stroke2);
+    border: 1px solid var(--stroke2);
+    transition: background 0.15s, border-color 0.15s;
+    position: relative;
+  }
+  .toggle input:checked + .toggle-track { background: rgba(255,255,255,.25); border-color: rgba(255,255,255,.3); }
+  .toggle-thumb {
+    position: absolute; top: 3px; left: 3px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--text-ter);
+    transition: left 0.15s, background 0.15s, width 0.1s;
+  }
+  .toggle input:checked ~ .toggle-thumb { left: 21px; background: #f0f0f0; }
+
+  /* ── SLIDER ── */
+  .slider-row { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+  .slider-wrap { flex: 1; }
+  input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 4px;
+    border-radius: 2px;
+    background: linear-gradient(to right, #d0d0d0 0%, #d0d0d0 var(--pct, 50%), var(--stroke2) var(--pct, 50%), var(--stroke2) 100%);
+    outline: none; cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 1px 4px rgba(0,0,0,.5);
+    transition: transform 0.1s;
+  }
+  input[type=range]::-webkit-slider-thumb:active { transform: scale(1.1); }
+  .slider-value {
+    font-size: 14px; font-weight: 600; color: var(--text-pri);
+    background: rgba(255,255,255,.05);
+    border: 1px solid var(--stroke);
+    border-radius: 5px;
+    padding: 4px 10px;
+    min-width: 52px; text-align: center;
+  }
+
+  /* ── MONITOR CHIPS ── */
+  .monitor-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .monitor-chip {
+    background: var(--layer);
+    border: 1px solid var(--stroke);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    min-width: 180px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .monitor-chip.warn { border-color: rgba(255,255,255,.10); }
+  .monitor-name { font-size: 13px; font-weight: 600; color: var(--text-pri); }
+  .monitor-hz { font-size: 22px; font-weight: 300; color: var(--text-pri); line-height: 1; }
+  .monitor-hz span { font-size: 13px; font-weight: 400; color: var(--text-ter); }
+  .monitor-warn { font-size: 11px; color: #888888; display: flex; align-items: center; gap: 4px; }
+  .monitor-ok   { font-size: 11px; color: #606060; display: flex; align-items: center; gap: 4px; }
+
+  /* ── STATUS BAR ── */
+  .statusbar {
+    height: 28px;
+    background: #161616;
+    border-top: 1px solid #2a2a2a;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px;
+    flex-shrink: 0;
+  }
+  .statusbar-msg { font-size: 11px; color: var(--text-ter); }
+  .statusbar-right { display: flex; align-items: center; gap: 14px; }
+  .status-pill {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 11px; color: var(--text-ter);
+  }
+  .status-pill .dot { width: 6px; height: 6px; border-radius: 50%; }
+  .status-pill .dot.green { background: #c0c0c0; }
+  .status-pill .dot.orange { background: #808080; }
+  .status-pill .dot.red { background: #f0f0f0; }
+
+  /* ── CHIP / TAG ── */
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; font-weight: 500;
+    padding: 2px 8px; border-radius: 4px;
+  }
+  .chip-blue { background: var(--accent-bg); color: var(--accent); }
+
+  /* ── INFO FOOTER ── */
+  .info-note {
+    font-size: 12px; color: var(--text-ter);
+    padding: 8px 16px 12px;
+    line-height: 1.5;
+  }
+
+  /* ── UTILITIES SECTION ── */
+  .util-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px;
+    background: var(--layer);
+    border-bottom: 1px solid var(--stroke);
+  }
+  .util-row:last-child { border-bottom: none; }
+  .util-icon {
+    width: 32px; height: 32px;
+    border-radius: 6px;
+    display: grid; place-items: center;
+    flex-shrink: 0;
+  }
+  .util-icon svg { width: 16px; height: 16px; fill: currentColor; }
+  .util-body { flex: 1; }
+  .util-title { font-size: 13px; font-weight: 500; color: var(--text-pri); }
+  .util-desc { font-size: 12px; color: var(--text-ter); margin-top: 1px; }
+
+  /* Subtle top line on cards */
+  .card-tl { border-top: 2px solid var(--accent); border-radius: var(--radius); }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadein { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+  .content > * { animation: fadein 0.22s ease both; }
+</style>
+</head>
+<body>
+<div class="window">
+
+  <!-- TITLE BAR -->
+  <div class="titlebar">
+    <div class="titlebar-app">
+      <div class="titlebar-icon">
+        <svg viewBox="0 0 10 10"><rect x="1" y="1" width="3.5" height="3.5" rx="0.5"/><rect x="5.5" y="1" width="3.5" height="3.5" rx="0.5"/><rect x="1" y="5.5" width="3.5" height="3.5" rx="0.5"/><rect x="5.5" y="5.5" width="3.5" height="3.5" rx="0.5"/></svg>
+      </div>
+      <span class="titlebar-title">PPBM &nbsp;·&nbsp; Processor Performance Boost Mode Manager</span>
+    </div>
+    <div class="titlebar-buttons">
+      <button class="tb-btn" onclick="void 0" title="Minimize">
+        <svg viewBox="0 0 10 10"><rect x="1" y="4.5" width="8" height="1"/></svg>
+      </button>
+      <button class="tb-btn" onclick="void 0" title="Maximize">
+        <svg viewBox="0 0 10 10"><rect x="1" y="1" width="8" height="8" rx="0" fill="none" stroke="currentColor" stroke-width="1"/></svg>
+      </button>
+      <button class="tb-btn close" onclick="void 0" title="Close">
+        <svg viewBox="0 0 10 10"><line x1="1" y1="1" x2="9" y2="9" stroke="currentColor" stroke-width="1.2"/><line x1="9" y1="1" x2="1" y2="9" stroke="currentColor" stroke-width="1.2"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- SHELL -->
+  <div class="shell">
+
+    <!-- NAV PANE -->
+    <nav class="nav">
+      <div class="nav-item active" onclick="showPage('dashboard')">
+        <svg viewBox="0 0 16 16"><path d="M0 2.5A2.5 2.5 0 0 1 2.5 0h2A2.5 2.5 0 0 1 7 2.5v2A2.5 2.5 0 0 1 4.5 7h-2A2.5 2.5 0 0 1 0 4.5v-2zm9 0A2.5 2.5 0 0 1 11.5 0h2A2.5 2.5 0 0 1 16 2.5v2A2.5 2.5 0 0 1 13.5 7h-2A2.5 2.5 0 0 1 9 4.5v-2zm0 9A2.5 2.5 0 0 1 11.5 9h2A2.5 2.5 0 0 1 16 11.5v2A2.5 2.5 0 0 1 13.5 16h-2A2.5 2.5 0 0 1 9 13.5v-2zm-9 0A2.5 2.5 0 0 1 2.5 9h2A2.5 2.5 0 0 1 7 11.5v2A2.5 2.5 0 0 1 4.5 16h-2A2.5 2.5 0 0 1 0 13.5v-2z"/></svg>
+        Dashboard
+      </div>
+      <div class="nav-item" onclick="showPage('profiles')">
+        <svg viewBox="0 0 16 16"><path d="M14 1H2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/><path d="M4 4h1v1H4V4zm0 3h1v1H4V7zm0 3h1v1H4v-1zm3-6h5v1H7V4zm0 3h5v1H7V7zm0 3h5v1H7v-1z"/></svg>
+        Power Profiles
+      </div>
+      <div class="nav-item" onclick="showPage('monitors')">
+        <svg viewBox="0 0 16 16"><path d="M0 4s0-2 2-2h12s2 0 2 2v6s0 2-2 2h-4v1h2v1H4v-1h2v-1H2s-2 0-2-2V4zm2-1a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H2z"/></svg>
+        Monitors
+      </div>
+      <div class="nav-item" onclick="showPage('utilities')">
+        <svg viewBox="0 0 16 16"><path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872l-.1-.34zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z"/></svg>
+        Utilities
+      </div>
+      <div class="nav-spacer"></div>
+      <div class="nav-bottom">
+        <div class="nav-item" onclick="void 0">
+          <svg viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/></svg>
+          About
+        </div>
+      </div>
+    </nav>
+
+    <!-- CONTENT AREA -->
+    <main class="content" id="page-dashboard">
+
+      <!-- PAGE HEADER -->
+      <div class="page-header">
+        <div class="page-title">Dashboard</div>
+        <div class="page-subtitle">System overview and quick actions</div>
+      </div>
+
+      <!-- HERO CARD: CPU Status -->
+      <div class="hero-card">
+        <!-- Temp -->
+        <div class="hero-temp-block">
+          <div class="hero-temp-label">CPU Temp</div>
+          <div class="hero-temp-value warm" id="temp-display">72°C</div>
+          <div class="hero-temp-meta">
+            <div class="hero-meta-row">
+              <span class="hero-meta-key">Max core</span>
+              <span class="hero-meta-val">74°C</span>
+            </div>
+            <div class="hero-meta-row">
+              <span class="hero-meta-key">Package</span>
+              <span class="hero-meta-val">71°C</span>
+            </div>
+            <div class="hero-meta-row">
+              <span class="hero-meta-key">Load</span>
+              <span class="hero-meta-val">14%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Divider -->
+        <div class="hero-divider"></div>
+
+        <!-- Info -->
+        <div class="hero-info">
+          <div class="hero-cpu-name">Intel Core i7-13700H</div>
+
+          <div class="boost-infobox">
+            <div class="boost-infobox-top">
+              <div class="boost-dot danger"></div>
+              <span class="boost-infobox-mode-label">Boost Mode</span>
+            </div>
+            <div class="boost-infobox-mode-name">Aggressive</div>
+            <div class="boost-infobox-hex">GUID: be337238-... &nbsp;·&nbsp; Value: 0x00000003</div>
+          </div>
+
+          <div class="alert-banner">
+            <svg viewBox="0 0 16 16"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
+            Aggressive boost is burning your CPU at idle — apply a fix now.
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="hero-actions">
+          <button class="btn btn-danger" onclick="applyFix()">
+            <svg viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"/></svg>
+            Auto-Detect &amp; Fix
+          </button>
+          <button class="btn btn-ghost btn-sm" onclick="refreshStatus()">
+            <svg viewBox="0 0 16 16"><path d="M11.534 7h3.932a.25.25 0 0 1 .192.41l-1.966 2.36a.25.25 0 0 1-.384 0l-1.966-2.36a.25.25 0 0 1 .192-.41zm-11 2h3.932a.25.25 0 0 0 .192-.41L2.692 6.23a.25.25 0 0 0-.384 0L.342 8.59A.25.25 0 0 0 .534 9z"/><path fill-rule="evenodd" d="M8 3c-1.552 0-2.94.707-3.857 1.818a.5.5 0 1 1-.771-.636A6.002 6.002 0 0 1 13.917 7H12.9A5.002 5.002 0 0 0 8 3zM3.1 9a5.002 5.002 0 0 0 8.757 2.182.5.5 0 1 1 .771.636A6.002 6.002 0 0 1 2.083 9H3.1z"/></svg>
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      <!-- POWER PROFILES -->
+      <div class="section-label">Power Profiles</div>
+
+      <div class="profile-list" id="profile-list">
+        <!-- profiles rendered by JS -->
+      </div>
+
+      <!-- MAX CPU SLIDER -->
+      <div class="section-label" style="margin-top:18px;">CPU Frequency Cap</div>
+      <div class="card" style="padding:14px 16px;">
+        <div class="setting-row" style="padding:0 0 10px; border:none; background:transparent;">
+          <div class="setting-row-icon" style="background:rgba(255,255,255,.05); color:var(--text-sec);">
+            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872l-.1-.34zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z"/></svg>
+          </div>
+          <div class="setting-row-body">
+            <div class="setting-row-title">Limit Max CPU Frequency</div>
+            <div class="setting-row-sub">99% disables turbo boost without restricting base clock</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="maxcpu-toggle" onchange="toggleMaxCpu(this)">
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+        </div>
+        <div class="slider-row" id="slider-section" style="opacity:0.4; pointer-events:none;">
+          <div class="slider-wrap">
+            <input type="range" id="cpu-slider" min="50" max="100" step="5" value="100"
+              oninput="updateSlider(this)"/>
+          </div>
+          <div class="slider-value" id="slider-val">100%</div>
+        </div>
+        <div class="info-note" style="padding:8px 0 0; color:var(--text-ter); font-size:12px;">
+          Lower values reduce heat at the cost of peak performance.
+        </div>
+      </div>
+
+    </main><!-- /page-dashboard -->
+
+    <!-- MONITORS PAGE (hidden) -->
+    <main class="content" id="page-monitors" style="display:none;">
+      <div class="page-header">
+        <div class="page-title">Connected Monitors</div>
+        <div class="page-subtitle">Refresh rate affects iGPU load and CPU thermals</div>
+      </div>
+      <div class="monitor-grid">
+        <div class="monitor-chip warn">
+          <div class="monitor-name">Dell U2723D</div>
+          <div class="monitor-hz">144<span> Hz</span></div>
+          <div class="monitor-warn">
+            <svg viewBox="0 0 16 16" width="10" height="10" fill="currentColor"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566z"/></svg>
+            Above 60Hz · adds ~5°C
+          </div>
+        </div>
+        <div class="monitor-chip warn">
+          <div class="monitor-name">LG 27GP850</div>
+          <div class="monitor-hz">165<span> Hz</span></div>
+          <div class="monitor-warn">
+            <svg viewBox="0 0 16 16" width="10" height="10" fill="currentColor"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566z"/></svg>
+            Above 60Hz · adds ~5°C
+          </div>
+        </div>
+        <div class="monitor-chip">
+          <div class="monitor-name">Built-in Display</div>
+          <div class="monitor-hz">60<span> Hz</span></div>
+          <div class="monitor-ok">
+            <svg viewBox="0 0 16 16" width="10" height="10" fill="currentColor"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/></svg>
+            Within safe range
+          </div>
+        </div>
+      </div>
+      <div class="info-note" style="padding:14px 0 0;">
+        High refresh rates on external monitors keep the integrated GPU constantly active, adding approximately 5°C per monitor running above 60 Hz at idle.
+      </div>
+    </main>
+
+    <!-- PROFILES PAGE (hidden) -->
+    <main class="content" id="page-profiles" style="display:none;">
+      <div class="page-header">
+        <div class="page-title">Power Profiles</div>
+        <div class="page-subtitle">Select a preset to apply the boost mode setting</div>
+      </div>
+      <div class="profile-list" id="profile-list-2"></div>
+    </main>
+
+    <!-- UTILITIES PAGE (hidden) -->
+    <main class="content" id="page-utilities" style="display:none;">
+      <div class="page-header">
+        <div class="page-title">Utilities</div>
+        <div class="page-subtitle">Power setting visibility and persistence tools</div>
+      </div>
+      <div class="card">
+        <div class="util-row">
+          <div class="util-icon" style="background:rgba(255,255,255,.05); color:var(--text-sec);">
+            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm7.5-6.923c-.67.204-1.335.82-1.887 1.855-.143.268-.276.56-.395.872.705.157 1.472.257 2.282.287V1.077zM4.249 3.539c.142-.384.304-.744.481-1.078a6.7 6.7 0 0 1 .597-.933A7.01 7.01 0 0 0 3.051 3.05c.362.184.763.349 1.198.49zM3.509 7.5c.036-1.07.188-2.087.436-3.008a9.124 9.124 0 0 1-1.565-.667A6.964 6.964 0 0 0 1.018 7.5h2.49zm1.4-2.741a12.344 12.344 0 0 0-.4 2.741H7.5V5.091c-.91-.03-1.783-.145-2.591-.332zM8.5 5.09V7.5h2.99a12.342 12.342 0 0 0-.399-2.741c-.808.187-1.681.301-2.591.332zM4.51 8.5c.035.987.176 1.914.399 2.741A13.612 13.612 0 0 1 7.5 10.91V8.5H4.51zm3.99 0v2.409c.91.03 1.783.145 2.591.332.223-.827.364-1.754.4-2.741H8.5zm-3.282 3.696c.12.312.252.604.395.872.552 1.035 1.218 1.65 1.887 1.855V11.91c-.81.03-1.577.13-2.282.287zm.11 2.276a6.696 6.696 0 0 1-.598-.933 8.853 8.853 0 0 1-.481-1.079 8.38 8.38 0 0 0-1.198.49 7.01 7.01 0 0 0 2.276 1.522zm-1.383-2.964A13.36 13.36 0 0 1 3.508 8.5h-2.49a6.963 6.963 0 0 0 1.362 3.675c.47-.258.995-.482 1.565-.667zm6.728 2.964a7.009 7.009 0 0 0 2.275-1.521 8.376 8.376 0 0 0-1.197-.49 8.853 8.853 0 0 1-.481 1.078 6.688 6.688 0 0 1-.597.933zM8.5 11.909v3.014c.67-.204 1.335-.82 1.887-1.855.143-.268.276-.56.395-.872A12.63 12.63 0 0 0 8.5 11.91zm3.555-.401c.57.185 1.095.409 1.565.667A6.963 6.963 0 0 0 14.982 8.5h-2.49a13.36 13.36 0 0 1-.437 3.008zM14.982 7.5a6.963 6.963 0 0 0-1.362-3.675c-.47.258-.995.482-1.565.667.248.92.4 1.938.437 3.008h2.49zM11.27 2.461c.177.334.339.694.482 1.078a8.368 8.368 0 0 0 1.196-.49 7.01 7.01 0 0 0-2.275-1.52c.218.283.418.597.597.932zm-.488 1.343a7.765 7.765 0 0 0-.395-.872C9.835 1.897 9.17 1.282 8.5 1.077V4.09c.81-.03 1.577-.13 2.282-.287z"/></svg>
+          </div>
+          <div class="util-body">
+            <div class="util-title">Unhide Boost Setting in Windows UI</div>
+            <div class="util-desc">Makes this setting visible in Control Panel → Power Options → Advanced Settings</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="void 0">Run</button>
+        </div>
+        <div class="util-row">
+          <div class="util-icon" style="background:rgba(255,255,255,.04); color:var(--text-sec);">
+            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/></svg>
+          </div>
+          <div class="util-body">
+            <div class="util-title">Survive Windows Updates</div>
+            <div class="util-desc">Creates a scheduled task that re-applies your settings after feature updates, with a 30-second startup delay</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="survive-btn" onclick="toggleSurvive()">Enable</button>
+        </div>
+        <div class="util-row">
+          <div class="util-icon" style="background:rgba(255,255,255,.04); color:var(--text-ter);">
+            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 0h5.293A1 1 0 0 1 10 .293L13.707 4a1 1 0 0 1 .293.707V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2zm5.5 1.5v2a1 1 0 0 0 1 1h2L9.5 1.5z"/></svg>
+          </div>
+          <div class="util-body">
+            <div class="util-title">Open Debug Log</div>
+            <div class="util-desc">%LOCALAPPDATA%\PPBM\debug.log — all powercfg interactions are recorded here</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="void 0">Open</button>
+        </div>
+      </div>
+    </main>
+
+  </div><!-- /shell -->
+
+  <!-- STATUS BAR -->
+  <div class="statusbar">
+    <div class="statusbar-msg" id="status-msg">Ready · Last refreshed just now</div>
+    <div class="statusbar-right">
+      <div class="status-pill">
+        <div class="dot red"></div>
+        Aggressive Mode Active
+      </div>
+      <div class="status-pill" style="color:var(--text-dis);">|</div>
+      <div class="status-pill">PPBM v1.0</div>
+      <div class="status-pill" style="color:var(--text-dis);">·</div>
+      <div class="status-pill">
+        <div class="dot green"></div>
+        Administrator
+      </div>
+    </div>
+  </div>
+
+</div><!-- /window -->
+
+<script>
+// ── DATA ──
+const PROFILES = [
+  {
+    id: 'quiet',
+    name: 'Cool &amp; Quiet',
+    desc: 'Disables CPU boost entirely. Idles 15–25°C cooler with minimal real-world performance loss.',
+    useCase: 'Productivity &amp; Daily Use',
+    tempLabel: 'Lowest',
+    tempColor: 'var(--green)',
+    recommended: true,
+    selected: false,
+    boost: 'Disabled',
+    hex: '0x00000000',
+  },
+  {
+    id: 'balanced',
+    name: 'Balanced',
+    desc: 'Boost enabled — Windows decides when to boost. Good balance of performance and thermals.',
+    useCase: 'General Purpose',
+    tempLabel: 'Moderate',
+    tempColor: 'var(--accent)',
+    recommended: false,
+    selected: false,
+    boost: 'Enabled',
+    hex: '0x00000001',
+  },
+  {
+    id: 'aggressive',
+    name: 'Aggressive',
+    desc: 'Windows factory default. CPU boosts aggressively even at idle, causing elevated temps continuously.',
+    useCase: 'Not Recommended',
+    tempLabel: 'Very High',
+    tempColor: 'var(--danger)',
+    recommended: false,
+    selected: true,
+    boost: 'Aggressive',
+    hex: '0x00000003',
+  },
+  {
+    id: 'gaming',
+    name: 'Gaming Optimized',
+    desc: 'Efficient Enabled — boost activates only when genuinely needed, giving good gaming performance.',
+    useCase: 'Gaming',
+    tempLabel: 'Moderate–High',
+    tempColor: 'var(--orange)',
+    recommended: false,
+    selected: false,
+    boost: 'Efficient Enabled',
+    hex: '0x00000004',
+  },
+  {
+    id: 'render',
+    name: 'Rendering / Compilation',
+    desc: 'Efficient Aggressive — maximum sustained throughput for heavy workloads like video encoding.',
+    useCase: 'Sustained Workloads',
+    tempLabel: 'High',
+    tempColor: 'var(--orange)',
+    recommended: false,
+    selected: false,
+    boost: 'Efficient Aggressive',
+    hex: '0x00000006',
+  },
+];
+
+function profileBadge(p) {
+  if (p.recommended) return '<span class="badge badge-green">Recommended</span>';
+  if (p.id === 'aggressive') return '<span class="badge badge-red">Hot</span>';
+  if (p.id === 'gaming' || p.id === 'render') return '<span class="badge badge-orange">Performance</span>';
+  return '';
+}
+
+function renderProfiles(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = PROFILES.map(p => `
+    <div class="profile-item ${p.selected ? 'selected' : ''} ${p.recommended ? 'recommended' : ''}"
+         onclick="selectProfile('${p.id}', '${containerId}')">
+      <div class="radio-circle ${p.selected ? 'selected' : ''}"></div>
+      <div class="profile-body">
+        <div class="profile-name-row">
+          <span class="profile-name">${p.name}</span>
+          ${profileBadge(p)}
+        </div>
+        <div class="profile-desc">${p.desc}</div>
+        <div class="profile-meta">
+          <span class="profile-use-case">${p.useCase}</span>
+          <span class="profile-sep">·</span>
+          <span class="profile-temp">Temps: <span style="color:${p.tempColor}">${p.tempLabel}</span></span>
+        </div>
+      </div>
+      <button class="btn btn-accent btn-sm" onclick="applyProfile(event,'${p.id}')">Apply</button>
+    </div>
+  `).join('');
+}
+
+renderProfiles('profile-list');
+renderProfiles('profile-list-2');
+
+function selectProfile(id, containerId) {
+  PROFILES.forEach(p => p.selected = (p.id === id));
+  renderProfiles('profile-list');
+  renderProfiles('profile-list-2');
+}
+
+function applyProfile(e, id) {
+  e.stopPropagation();
+  selectProfile(id, 'profile-list');
+  const p = PROFILES.find(x => x.id === id);
+  setStatus('Applied: ' + p.name.replace('&amp;','&') + ' (' + p.boost + ')');
+}
+
+// ── SLIDER ──
+function toggleMaxCpu(cb) {
+  const section = document.getElementById('slider-section');
+  section.style.opacity = cb.checked ? '1' : '0.4';
+  section.style.pointerEvents = cb.checked ? 'auto' : 'none';
+}
+
+function updateSlider(el) {
+  const pct = ((el.value - el.min) / (el.max - el.min)) * 100;
+  el.style.setProperty('--pct', pct + '%');
+  document.getElementById('slider-val').textContent = el.value + '%';
+}
+// init slider fill
+(function(){ const el = document.getElementById('cpu-slider'); if(el) updateSlider(el); })();
+
+// ── NAV ──
+const pages = ['dashboard','profiles','monitors','utilities'];
+function showPage(name) {
+  pages.forEach(p => {
+    const el = document.getElementById('page-' + p);
+    if (el) el.style.display = (p === name) ? 'flex' : 'none';
+  });
+  document.querySelectorAll('.nav-item').forEach((el, i) => {
+    const labels = ['dashboard','profiles','monitors','utilities','about'];
+    el.classList.toggle('active', labels[i] === name);
+  });
+}
+
+// ── ACTIONS ──
+function applyFix() {
+  selectProfile('quiet', 'profile-list');
+  selectProfile('quiet', 'profile-list-2');
+  setStatus('Auto-fix applied: Cool & Quiet mode set. Temperature should drop in ~30 seconds.');
+  // Update hero
+  document.querySelector('.boost-dot').className = 'boost-dot ok';
+  document.querySelector('.boost-infobox-mode-name').textContent = 'Disabled';
+  document.querySelector('.boost-infobox-hex').textContent = 'GUID: be337238-...  ·  Value: 0x00000000';
+  document.querySelector('.alert-banner').style.display = 'none';
+  document.querySelector('.hero-temp-value').className = 'hero-temp-value cool';
+  document.querySelector('.hero-temp-value').textContent = '51°C';
+  document.querySelector('.statusbar .status-pill').innerHTML = '<div class="dot green"></div> Cool &amp; Quiet Active';
+}
+
+function refreshStatus() {
+  setStatus('Refreshing sensor data…');
+  setTimeout(() => setStatus('Ready · Last refreshed just now'), 1200);
+}
+
+let surviveOn = false;
+function toggleSurvive() {
+  surviveOn = !surviveOn;
+  document.getElementById('survive-btn').textContent = surviveOn ? 'Disable' : 'Enable';
+  setStatus(surviveOn ? 'Survive Updates enabled — scheduled task created.' : 'Survive Updates disabled.');
+}
+
+function setStatus(msg) {
+  document.getElementById('status-msg').textContent = msg;
+}
+
+// Page content area needs flex-direction column
+document.querySelectorAll('.content').forEach(el => { el.style.flexDirection = 'column'; });
+</script>
+</body>
+</html>

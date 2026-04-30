@@ -6,13 +6,13 @@ using WColor = System.Windows.Media.Color;
 namespace PPBM.Converters;
 
 /// <summary>
-/// Converts a boolean "is recommended" flag to a background <see cref="SolidColorBrush"/>:
-/// <c>true</c> returns a dark green tint, <c>false</c> returns a neutral dark gray.
+/// Returns a background brush for a profile card based on its recommendation flag.
+/// Uses the monochrome palette: recommended cards get a subtle lighter background.
 /// </summary>
 public class RecommendBgConverter : IValueConverter
 {
-    private static readonly SolidColorBrush RecommendedBg = new(WColor.FromRgb(0x36, 0x3B, 0x36));
-    private static readonly SolidColorBrush NormalBg = new(WColor.FromRgb(0x2C, 0x2C, 0x2C));
+    private static readonly SolidColorBrush RecommendedBg = new(WColor.FromRgb(0x20, 0x20, 0x20));
+    private static readonly SolidColorBrush NormalBg = new(WColor.FromRgb(0x1E, 0x1E, 0x1E));
 
     /// <inheritdoc />
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
