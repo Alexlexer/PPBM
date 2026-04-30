@@ -1,13 +1,32 @@
 using System.Windows;
-using System.Windows.Threading;
+using Microsoft.Extensions.DependencyInjection;
+using PPBM.Extensions;
 
 namespace PPBM;
 
+/// <summary>
+/// Application entry point. Configures the dependency injection container
+/// and launches the main window.
+/// </summary>
 public partial class App : System.Windows.Application
 {
+    private IServiceProvider _serviceProvider = null!;
+
+    /// <summary>
+    /// Initializes a new instance of <see cref="App"/>.
+    /// </summary>
+    public App()
+    {
+        var services = new ServiceCollection();
+        services.AddProjectServices();
+        _serviceProvider = services.BuildServiceProvider();
+    }
+
+    /// <inheritdoc />
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
         DispatcherUnhandledException += (_, args) =>
         {
             System.Windows.MessageBox.Show(
@@ -18,5 +37,8 @@ public partial class App : System.Windows.Application
                 MessageBoxImage.Warning);
             args.Handled = true;
         };
+
+        var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
+        mainWindow.Show();
     }
 }

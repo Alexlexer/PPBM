@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="PPBM/PPBM.csproj" />
+  <Project Path="PPBM.Tests/PPBM.Tests.csproj" />
 </Solution>

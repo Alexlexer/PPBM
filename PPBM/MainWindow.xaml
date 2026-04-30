@@ -11,10 +11,6 @@
         AllowsTransparency="False"
         Background="#202020">
 
-    <Window.DataContext>
-        <vm:MainViewModel/>
-    </Window.DataContext>
-
     <Window.Resources>
         <!-- Converters -->
         <conv:BoolToVisibilityConverter x:Key="BoolToVis"/>

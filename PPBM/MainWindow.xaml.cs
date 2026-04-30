@@ -6,10 +6,18 @@ using PPBM.ViewModels;
 
 namespace PPBM;
 
+/// <summary>
+/// Main application window for PPBM (Processor Performance Boost Mode Manager).
+/// </summary>
 public partial class MainWindow : Window
 {
-    public MainWindow()
+    /// <summary>
+    /// Initializes a new instance of <see cref="MainWindow"/> with the provided ViewModel.
+    /// </summary>
+    /// <param name="viewModel">The main ViewModel to use as DataContext.</param>
+    public MainWindow(MainViewModel viewModel)
     {
+        DataContext = viewModel;
         InitializeComponent();
         StateChanged += (_, _) =>
         {

@@ -1,21 +1,27 @@
+using System.Diagnostics;
 using System.IO;
 using Microsoft.Win32.TaskScheduler;
+using PPBM.Contracts;
 using PPBM.Models;
-using System.Diagnostics;
 using TaskService = Microsoft.Win32.TaskScheduler.TaskService;
-using Task = System.Threading.Tasks.Task;
 using TaskDefinition = Microsoft.Win32.TaskScheduler.TaskDefinition;
 using TaskRunLevel = Microsoft.Win32.TaskScheduler.TaskRunLevel;
 using TaskLogonType = Microsoft.Win32.TaskScheduler.TaskLogonType;
+using SysTask = System.Threading.Tasks.Task;
 
 namespace PPBM.Services;
 
-public class ScheduledTaskService
+/// <summary>
+/// Manages the Windows scheduled task that re-applies Processor Performance Boost Mode
+/// after system updates and user logon. Implements <see cref="IScheduledTaskService"/>.
+/// </summary>
+public class ScheduledTaskService : IScheduledTaskService
 {
     private const string TaskName = "PPBM_ApplyBoostMode";
     private const string BatFileName = "PPBM_ApplyBoost.bat";
 
-    public static bool IsTaskInstalled()
+    /// <inheritdoc />
+    public bool IsTaskInstalled()
     {
         try
         {
@@ -29,10 +35,13 @@ public class ScheduledTaskService
         }
     }
 
-    public static async Task<bool> InstallTaskAsync(BoostMode mode, int maxCpuPercent = 100)
+    /// <inheritdoc />
+    public async Task<bool> InstallTaskAsync(BoostMode mode, int maxCpuPercent = 100, CancellationToken ct = default)
     {
-        return await Task.Run(() =>
+        return await SysTask.Run(() =>
         {
+            ct.ThrowIfCancellationRequested();
+
             try
             {
                 var batPath = Path.Combine(
@@ -69,20 +78,28 @@ powercfg /setactive SCHEME_CURRENT
                 ts.RootFolder.RegisterTaskDefinition(TaskName, td);
                 return true;
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch
             {
                 return false;
             }
-        });
+        }, ct);
     }
 
-    public static void UninstallTask()
+    /// <inheritdoc />
+    public void UninstallTask()
     {
         try
         {
             using var ts = new TaskService();
             ts.RootFolder.DeleteTask(TaskName, false);
         }
-        catch { }
+        catch
+        {
+            // Task may not exist or insufficient permissions; swallow.
+        }
     }
 }
