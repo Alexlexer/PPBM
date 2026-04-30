@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -12,14 +13,16 @@ namespace PPBM.ViewModels;
 public class MainViewModel : INotifyPropertyChanged
 {
     private readonly System.Timers.Timer _pollTimer;
+    private PerformanceCounter[] _thermalCounters = [];
+    private bool _thermalReady;
 
-    private static readonly SolidColorBrush TempCold = new(WColor.FromRgb(0x4C, 0xAF, 0x50));
-    private static readonly SolidColorBrush TempWarm = new(WColor.FromRgb(0xFF, 0xC1, 0x07));
-    private static readonly SolidColorBrush TempHot = new(WColor.FromRgb(0xFF, 0x98, 0x00));
-    private static readonly SolidColorBrush TempCritical = new(WColor.FromRgb(0xF4, 0x43, 0x36));
-    private static readonly SolidColorBrush BoostNormal = new(WColor.FromRgb(0xFA, 0xB3, 0x87));
-    private static readonly SolidColorBrush BoostDisabled = new(WColor.FromRgb(0xA6, 0xE3, 0xA1));
-    private static readonly SolidColorBrush BoostAggressive = new(WColor.FromRgb(0xF3, 0x8B, 0xA8));
+    private static readonly SolidColorBrush TempCold = new(WColor.FromRgb(0x6B, 0xCB, 0x77));
+    private static readonly SolidColorBrush TempWarm = new(WColor.FromRgb(0xFF, 0xD1, 0x66));
+    private static readonly SolidColorBrush TempHot = new(WColor.FromRgb(0xFF, 0x8C, 0x42));
+    private static readonly SolidColorBrush TempCritical = new(WColor.FromRgb(0xE0, 0x43, 0x43));
+    private static readonly SolidColorBrush BoostNormal = new(WColor.FromRgb(0x60, 0xCD, 0xFF));
+    private static readonly SolidColorBrush BoostDisabled = new(WColor.FromRgb(0x6B, 0xCB, 0x77));
+    private static readonly SolidColorBrush BoostAggressive = new(WColor.FromRgb(0xE0, 0x43, 0x43));
 
     public MainViewModel()
     {
@@ -34,15 +37,33 @@ public class MainViewModel : INotifyPropertyChanged
         SelectProfileCommand = new RelayCommand(obj => { if (obj is PowerProfile p) SelectedProfile = p; return Task.CompletedTask; });
 
         _pollTimer = new System.Timers.Timer(2000);
-        _pollTimer.Elapsed += (_, _) =>
+        _pollTimer.Elapsed += async (_, _) =>
         {
             try
             {
-                System.Windows.Application.Current?.Dispatcher?.Invoke(UpdateTemps);
+                await PollTempsAsync();
             }
             catch { }
         };
         _pollTimer.AutoReset = true;
+
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                var names = new PerformanceCounterCategory("Thermal Zone Information").GetInstanceNames();
+                _thermalCounters = new PerformanceCounter[names.Length];
+                for (int i = 0; i < names.Length; i++)
+                {
+                    var pc = new PerformanceCounter("Thermal Zone Information", "Temperature", names[i], true);
+                    pc.NextValue(); // warm up
+                    _thermalCounters[i] = pc;
+                }
+                _thermalReady = true;
+            }
+            catch { _thermalReady = true; }
+        });
+
         _pollTimer.Start();
 
         _ = RefreshAsync();
@@ -147,7 +168,7 @@ public class MainViewModel : INotifyPropertyChanged
     {
         get => field;
         set { field = value; OnPropertyChanged(); }
-    } = new(WColor.FromRgb(0x88, 0x88, 0x88));
+    } = new(WColor.FromRgb(0x99, 0x99, 0x99));
 
     public string TempDescription
     {
@@ -217,8 +238,12 @@ public class MainViewModel : INotifyPropertyChanged
         IsAggressiveDetected = mode == BoostMode.Aggressive;
         BoostHexValue = $"0x{((int)mode):X8}";
 
-        Monitors = [.. MonitorService.GetMonitors()];
-        SurviveUpdatesEnabled = ScheduledTaskService.IsTaskInstalled();
+        var monitors = await Task.Run(MonitorService.GetMonitors);
+        var surviveEnabled = await Task.Run(ScheduledTaskService.IsTaskInstalled);
+        Monitors = [.. monitors];
+        SurviveUpdatesEnabled = surviveEnabled;
+
+        await PollTempsAsync();
 
         StatusMessage = IsAggressiveDetected
             ? "Aggressive boost mode detected -- causing high idle temps!"
@@ -227,41 +252,84 @@ public class MainViewModel : INotifyPropertyChanged
         IsBusy = false;
     }
 
-    private void UpdateTemps()
+    private async Task PollTempsAsync()
     {
+        string cpuName = "Detecting...";
+        float? maxTemp = null;
+        float? cpuLoad = null;
+
         try
         {
-            using var searcher = new System.Management.ManagementObjectSearcher(
-                @"root\WMI", "SELECT * FROM MSAcpi_ThermalZoneTemperature");
-            float? maxTemp = null;
-            foreach (System.Management.ManagementObject obj in searcher.Get())
+            await Task.Run(() =>
             {
-                var val = Convert.ToDouble(obj["CurrentTemperature"]);
-                var celsius = (float)((val / 10.0) - 273.15);
-                if (maxTemp is null || celsius > maxTemp)
-                    maxTemp = celsius;
-                CpuName = "CPU (WMI)";
-            }
+                if (_thermalReady)
+                {
+                    foreach (var pc in _thermalCounters)
+                    {
+                        try
+                        {
+                            var kelvin = pc.NextValue();
+                            var celsius = kelvin - 273.15f;
+                            if (celsius is >= 0 and <= 150 && (maxTemp is null || celsius > maxTemp))
+                                maxTemp = celsius;
+                        }
+                        catch { }
+                    }
+                }
 
-            if (maxTemp is not null)
-            {
-                PackageTemp = maxTemp;
-                MaxCoreTemp = maxTemp;
-            }
+                if (maxTemp is null)
+                {
+                    try
+                    {
+                        using var searcher = new System.Management.ManagementObjectSearcher(
+                            @"root\WMI", "SELECT * FROM MSAcpi_ThermalZoneTemperature");
+                        foreach (System.Management.ManagementObject obj in searcher.Get())
+                        {
+                            try
+                            {
+                                var val = Convert.ToDouble(obj["CurrentTemperature"]);
+                                var celsius = (float)((val / 10.0) - 273.15);
+                                if (celsius is >= 0 and <= 150 && (maxTemp is null || celsius > maxTemp))
+                                    maxTemp = celsius;
+                            }
+                            catch { }
+                        }
+                    }
+                    catch { }
+                }
 
-            using var loadSearcher = new System.Management.ManagementObjectSearcher(
-                "SELECT * FROM Win32_PerfFormattedData_Counters_ProcessorInformation WHERE Name='_Total'");
-            foreach (System.Management.ManagementObject obj in loadSearcher.Get())
-            {
-                CpuLoad = Convert.ToSingle(obj["PercentProcessorPerformance"]);
-            }
+                using var cpuSearcher = new System.Management.ManagementObjectSearcher(
+                    "SELECT Name, LoadPercentage FROM Win32_Processor");
+                foreach (System.Management.ManagementObject obj in cpuSearcher.Get())
+                {
+                    try
+                    {
+                        cpuName = obj["Name"]?.ToString() ?? "CPU";
+                        var rawLoad = obj["LoadPercentage"];
+                        if (rawLoad is not null)
+                            cpuLoad = Convert.ToSingle(rawLoad);
+                    }
+                    catch { }
+                }
+            });
         }
         catch
         {
-            CpuName = "N/A";
-            PackageTemp = null;
-            MaxCoreTemp = null;
+            cpuName = "N/A";
+            maxTemp = null;
+            cpuLoad = null;
         }
+
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
+        if (dispatcher is null) return;
+
+        await dispatcher.InvokeAsync(() =>
+        {
+            CpuName = cpuName;
+            PackageTemp = maxTemp;
+            MaxCoreTemp = maxTemp;
+            CpuLoad = cpuLoad;
+        });
     }
 
     private void UpdateTempDisplay()
@@ -270,7 +338,7 @@ public class MainViewModel : INotifyPropertyChanged
         if (temp is null)
         {
             TempDescription = "N/A";
-            TempColorBrush = new SolidColorBrush(WColor.FromRgb(0x88, 0x88, 0x88));
+            TempColorBrush = new SolidColorBrush(WColor.FromRgb(0x99, 0x99, 0x99));
             return;
         }
 

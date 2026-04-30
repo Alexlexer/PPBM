@@ -10,33 +10,60 @@ public static class PowerConfigService
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "PPBM", "debug.log");
 
+    private const string BoostSettingGuid = "be337238-0d82-4146-a960-4f3749d470c7";
+
     public static async Task<BoostMode> GetCurrentBoostModeAsync()
     {
-        var raw = await ExecAsync("/query", "SCHEME_CURRENT", "SUB_PROCESSOR", "PERFBOOSTMODE");
+        var mode = await TryGetBoostModeAsync();
+        if (mode is not null)
+        {
+            Log($"  -> {(int)mode.Value}");
+            return mode.Value;
+        }
+
+        Log("Boost setting hidden, attempting to unhide...");
+        await ExecBoolAsync("-attributes", "SUB_PROCESSOR", BoostSettingGuid, "-ATTRIB_HIDE");
+
+        mode = await TryGetBoostModeAsync();
+        if (mode is not null)
+        {
+            Log($"  -> {(int)mode.Value}");
+            return mode.Value;
+        }
+
+        Log("  -> setting still not found, defaulting to Aggressive");
+        return BoostMode.Aggressive;
+    }
+
+    private static async Task<BoostMode?> TryGetBoostModeAsync()
+    {
+        var raw = await ExecAsync("/query", "SCHEME_CURRENT", "SUB_PROCESSOR", BoostSettingGuid);
         Log($"--- /query output ---\n{raw ?? "null"}");
 
-        if (raw is null) return BoostMode.Aggressive;
+        if (raw is null) return null;
 
-        int last = 2, i = 0;
+        int? found = null;
+        int i = 0;
         while ((i = raw.IndexOf("0x", i)) >= 0)
         {
             var end = i + 2;
             while (end < raw.Length && IsHex(raw[end])) end++;
             if (int.TryParse(raw.AsSpan(i + 2, end - i - 2),
                     System.Globalization.NumberStyles.HexNumber, null, out var v) && v <= 4)
-                last = v;
+                found = v;
             i = end;
         }
 
-        Log($"  -> {last}");
-        return last switch
+        if (found is null) return null;
+
+        return found switch
         {
             0 => BoostMode.Disabled,
             1 => BoostMode.Enabled,
             2 => BoostMode.Aggressive,
             3 => BoostMode.EfficientEnabled,
             4 => BoostMode.EfficientAggressive,
-            _ => BoostMode.Aggressive
+            _ => null
         };
     }
 
@@ -65,7 +92,7 @@ public static class PowerConfigService
 
     public static async Task<bool> UnhideBoostSettingAsync()
     {
-        return await ExecBoolAsync("-attributes", "SUB_PROCESSOR", "be337238-0d82-4146-a960-4f3749d470c7", "-ATTRIB_HIDE");
+        return await ExecBoolAsync("-attributes", "SUB_PROCESSOR", BoostSettingGuid, "-ATTRIB_HIDE");
     }
 
     private static async Task<string?> ExecAsync(params string[] args)

@@ -16,7 +16,7 @@ public partial class MainWindow : Window
             var border = (System.Windows.Controls.Border)Content;
             border.CornerRadius = WindowState == WindowState.Maximized
                 ? new CornerRadius(0)
-                : new CornerRadius(14);
+                : new CornerRadius(8);
         };
     }
 

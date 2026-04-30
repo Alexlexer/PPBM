@@ -17,8 +17,8 @@ public class BoolToVisibilityConverter : IValueConverter
 
 public class RecommendBgConverter : IValueConverter
 {
-    private static readonly SolidColorBrush RecommendedBg = new(WColor.FromRgb(0x31, 0x3F, 0x3F));
-    private static readonly SolidColorBrush NormalBg = new(WColor.FromRgb(0x45, 0x47, 0x5A));
+    private static readonly SolidColorBrush RecommendedBg = new(WColor.FromRgb(0x36, 0x3B, 0x36));
+    private static readonly SolidColorBrush NormalBg = new(WColor.FromRgb(0x2C, 0x2C, 0x2C));
 
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
@@ -32,8 +32,8 @@ public class RecommendBgConverter : IValueConverter
 
 public class WarnColorConverter : IValueConverter
 {
-    private static readonly SolidColorBrush WarnColor = new(WColor.FromRgb(0xF3, 0x8B, 0xA8));
-    private static readonly SolidColorBrush OkColor = new(WColor.FromRgb(0xA6, 0xE3, 0xA1));
+    private static readonly SolidColorBrush WarnColor = new(WColor.FromRgb(0xE0, 0x43, 0x43));
+    private static readonly SolidColorBrush OkColor = new(WColor.FromRgb(0x6B, 0xCB, 0x77));
 
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
