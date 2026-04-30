@@ -8,6 +8,17 @@ on:
 jobs:
   publish:
     runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - rid: win-x64
+            type: selfcontained
+          - rid: win-x86
+            type: selfcontained
+          - rid: win-arm64
+            type: selfcontained
+          - rid: win-x64
+            type: frameworkdependent
     steps:
       - uses: actions/checkout@v4
       - name: Setup .NET
@@ -17,9 +28,19 @@ jobs:
       - name: Restore
         run: dotnet restore PPBM/PPBM.csproj
       - name: Publish
-        run: dotnet publish PPBM/PPBM.csproj -c Release -r win-x64 -o publish
+        run: |
+          echo "Publishing for RID=${{ matrix.rid }} type=${{ matrix.type }}"
+          if [ "${{ matrix.type }}" = "selfcontained" ]; then
+            dotnet publish PPBM/PPBM.csproj -c Release -r ${{ matrix.rid }} -o publish --self-contained true /p:PublishSingleFile=true /p:PublishTrimmed=false /p:PublishReadyToRun=false /p:DebugType=None /p:DebugSymbols=false /p:EnableCompressionInSingleFile=true
+          else
+            dotnet publish PPBM/PPBM.csproj -c Release -r ${{ matrix.rid }} -o publish --self-contained false /p:PublishSingleFile=false /p:PublishTrimmed=false /p:PublishReadyToRun=false /p:DebugType=None /p:DebugSymbols=false
+          fi
+      - name: List publish output
+        run: |
+          echo "Publish output for ${{ matrix.rid }} (${{ matrix.type }}):";
+          dir publish -Recurse || true
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ppbm-release
+          name: ppbm-${{ matrix.rid }}-${{ matrix.type }}
           path: publish
