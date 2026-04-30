@@ -110,7 +110,12 @@ public static class PowerConfigService
                 foreach (var a in args) psi.ArgumentList.Add(a);
 
                 Log($"> powercfg {string.Join(" ", args)}");
-                using var proc = Process.Start(psi)!;
+                using var proc = Process.Start(psi);
+                if (proc == null)
+                {
+                    Log("  Process.Start returned null");
+                    return null;
+                }
                 var o = proc.StandardOutput.ReadToEnd();
                 var e = proc.StandardError.ReadToEnd();
                 proc.WaitForExit(10000);

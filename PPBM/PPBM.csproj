@@ -19,8 +19,7 @@
     <PublishTrimmed>false</PublishTrimmed>
     <!-- ReadyToRun increases size; disable for smaller binaries -->
     <PublishReadyToRun>false</PublishReadyToRun>
-    <!-- compress the single-file bundle -->
-    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <!-- Compression in single-file bundles requires SelfContained=true; disabled for framework-dependent publish -->
     <!-- strip debug symbols in Release publish -->
     <DebugType>None</DebugType>
     <DebugSymbols>false</DebugSymbols>
