@@ -28,7 +28,7 @@ jobs:
         run: dotnet build PPBM/PPBM.csproj -c Release --no-restore
 
       - name: Publish
-        run: dotnet publish PPBM/PPBM.csproj -c Release -r win-x64 -o ./publish
+        run: dotnet publish PPBM/PPBM.csproj -c Release -r win-x64 -p:PublishSingleFile=true -p:PublishTrimmed=true --self-contained true -o ./publish
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
