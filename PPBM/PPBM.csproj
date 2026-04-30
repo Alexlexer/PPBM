@@ -13,8 +13,17 @@
 
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <PublishSingleFile>true</PublishSingleFile>
-    <SelfContained>true</SelfContained>
-    <PublishReadyToRun>true</PublishReadyToRun>
+    <!-- produce a framework-dependent single exe to avoid bundling the runtime -->
+    <SelfContained>false</SelfContained>
+    <!-- Trimming is disabled for Windows Forms (unsupported). -->
+    <PublishTrimmed>false</PublishTrimmed>
+    <!-- ReadyToRun increases size; disable for smaller binaries -->
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <!-- compress the single-file bundle -->
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <!-- strip debug symbols in Release publish -->
+    <DebugType>None</DebugType>
+    <DebugSymbols>false</DebugSymbols>
   </PropertyGroup>
 
   <ItemGroup>
